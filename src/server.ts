@@ -1,15 +1,23 @@
-import express from 'express';
 import dotenv from 'dotenv';
+import { app } from './app';
+import { pool } from './db/pool';
 
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
+async function start() {
+  try {
+    await pool.query('SELECT 1');
+    console.log('PostgreSQL подключён');
 
-app.listen(port, () => {
-  console.log(`Сервер запущен на http://localhost:${port}`);
-});
+    app.listen(port, () => {
+      console.log(`Сервер запущен на http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error('Не удалось запустить сервер:', err);
+    process.exit(1);
+  }
+}
+
+start();
