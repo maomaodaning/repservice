@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Ремонт цифровой техники</h1>
+    <nav>
+      <a href="/">Главная</a>
+      <a href="/register.html">Регистрация</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Вход в систему</h2>
+    <form id="login-form" style="max-width: 400px;">
+      <label>Логин<br><input type="text" name="login" required></label><br><br>
+      <label>Пароль<br><input type="password" name="password" required></label><br><br>
+      <button type="submit">Войти</button>
+    </form>
+    <p id="message"></p>
+  </main>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById('message');
+      
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            login: form.login.value,
+            password: form.password.value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Ошибка');
+        
+        msg.textContent = 'Вход выполнен! Перенаправление...';
+        msg.style.color = 'green';
+        setTimeout(() => window.location.href = '/', 1000);
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.style.color = 'red';
+      }
+    });
+  </script>
+</body>
+</html>

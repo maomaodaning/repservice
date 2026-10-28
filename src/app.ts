@@ -5,6 +5,7 @@ import session from 'express-session';
 import { errorHandler } from './middleware/errorHandler';
 import { servicesRouter } from './routes/services';
 import { profileRouter } from './routes/profile';
+import { requestsRouter } from './routes/requests';
 
 export const app = express();
 
@@ -37,5 +38,6 @@ console.log('authRouter type:', typeof authRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/requests', requestsRouter);
 
 app.use(errorHandler);
