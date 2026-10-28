@@ -15,7 +15,8 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "dotenv": "^18.0.9",
-    "express": "^5.3.0",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0",
     "pg": "^8.23.1"
   },
   "allowScripts": {
@@ -24,7 +25,8 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
-    "@types/express": "^5.0.6",
+    "@types/express": "^4.17.25",
+    "@types/express-session": "^1.19.0",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "tsx": "^4.23.15",

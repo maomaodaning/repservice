@@ -1,16 +1,37 @@
+import { authRouter } from './routes/auth';
 import express from 'express';
 import path from 'path';
-import { errorHandler } from './middleware/errorHandler.js';
+import session from 'express-session';
+import { errorHandler } from './middleware/errorHandler';
 
 export const app = express();
 
 app.use(express.json());
+
+console.log('static path:', path.join(__dirname, '..', 'public'));
+console.log('static middleware:', typeof express.static(path.join(__dirname, '..', 'public')));
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+console.log('session type:', typeof session);
+
+// Настройка сессий
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,    // защита от XSS
+    maxAge: 1000 * 60 * 60 * 24, // 24 часа
+  },
+}));
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Сюда будут монтироваться роуты
+console.log('authRouter type:', typeof authRouter);
+
+app.use('/api/auth', authRouter);
 
 app.use(errorHandler);
