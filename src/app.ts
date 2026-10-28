@@ -3,6 +3,8 @@ import express from 'express';
 import path from 'path';
 import session from 'express-session';
 import { errorHandler } from './middleware/errorHandler';
+import { servicesRouter } from './routes/services';
+import { profileRouter } from './routes/profile';
 
 export const app = express();
 
@@ -33,5 +35,7 @@ app.get('/api/health', (_req, res) => {
 console.log('authRouter type:', typeof authRouter);
 
 app.use('/api/auth', authRouter);
+app.use('/api/services', servicesRouter);
+app.use('/api/profile', profileRouter);
 
 app.use(errorHandler);
