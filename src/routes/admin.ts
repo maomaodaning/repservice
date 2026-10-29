@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { requireRole } from '../middleware/auth';
-import { getAllRequests, assignMaster, getAllMasters } from '../services/adminService';
+import { 
+  getAllRequests, assignMaster, getAllMasters,
+  getAllParts, createPart, supplyPart, getAllSuppliers,
+  createPurchaseOrder, receivePurchaseOrder
+} from '../services/adminService';
 
 export const adminRouter = Router();
 
@@ -42,4 +46,59 @@ adminRouter.get('/masters', async (_req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ===== СКЛАД =====
+
+console.log('getAllParts type:', typeof getAllParts);
+
+adminRouter.get('/parts', async (_req, res, next) => {
+  try {
+    const parts = await getAllParts();
+    res.json({ parts });
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/parts', async (req, res, next) => {
+  try {
+    const { name, article, quantity, price, min_quantity, supplier_id } = req.body;
+    const part = await createPart({ name, article, quantity, price, min_quantity, supplier_id });
+    res.status(201).json({ part });
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/parts/:id/supply', async (req, res, next) => {
+  try {
+    const { quantity } = req.body;
+    if (!quantity || quantity <= 0) throw new Error('Количество должно быть больше 0');
+    const part = await supplyPart(Number(req.params.id), quantity);
+    res.json({ part });
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/suppliers', async (_req, res, next) => {
+  try {
+    const suppliers = await getAllSuppliers();
+    res.json({ suppliers });
+  } catch (err) { next(err); }
+});
+
+// ===== ЗАКАЗЫ =====
+
+adminRouter.post('/orders', async (req, res, next) => {
+  try {
+    const { supplier_id, items } = req.body;
+    if (!supplier_id || !items || !Array.isArray(items) || items.length === 0) {
+      throw new Error('Укажите поставщика и хотя бы одну позицию');
+    }
+    const order = await createPurchaseOrder(supplier_id, items);
+    res.status(201).json({ order });
+  } catch (err) { next(err); }
+});
+
+adminRouter.put('/orders/:id/receive', async (req, res, next) => {
+  try {
+    const result = await receivePurchaseOrder(Number(req.params.id));
+    res.json(result);
+  } catch (err) { next(err); }
 });

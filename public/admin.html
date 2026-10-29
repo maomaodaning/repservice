@@ -19,39 +19,71 @@
     </nav>
   </header>
 
-  <main style="max-width: 1200px;">
-    <h2>Все заявки</h2>
-    
-    <div style="margin-bottom: 1rem;">
-      <label>Фильтр по статусу: 
-        <select id="filter-status" onchange="loadRequests()">
-          <option value="">Все</option>
-          <option value="Новая">Новая</option>
-          <option value="Принята">Принята</option>
-          <option value="В работе">В работе</option>
-          <option value="Готово">Готово</option>
-          <option value="Оплачено">Оплачено</option>
-          <option value="Выдано">Выдано</option>
-        </select>
-      </label>
+    <main style="max-width: 1200px;">
+    <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+      <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;">Заявки</button>
+      <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
     </div>
 
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Клиент</th>
-          <th>Устройство</th>
-          <th>Неисправность</th>
-          <th>Статус</th>
-          <th>Мастер</th>
-          <th>Действие</th>
-        </tr>
-      </thead>
-      <tbody id="requests-tbody">
-        <tr><td colspan="7">Загрузка...</td></tr>
-      </tbody>
-    </table>
+    <!-- ВКЛАДКА: ЗАЯВКИ -->
+    <div id="tab-requests">
+      <h2>Все заявки</h2>
+      <!-- ... существующий код с фильтром и таблицей заявок ... -->
+      <div style="margin-bottom: 1rem;">
+        <label>Фильтр по статусу: 
+          <select id="filter-status" onchange="loadRequests()">
+            <option value="">Все</option>
+            <option value="Новая">Новая</option>
+            <option value="Принята">Принята</option>
+            <option value="В работе">В работе</option>
+            <option value="Готово">Готово</option>
+            <option value="Оплачено">Оплачено</option>
+            <option value="Выдано">Выдано</option>
+          </select>
+        </label>
+      </div>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Клиент</th><th>Устройство</th><th>Неисправность</th><th>Статус</th><th>Мастер</th><th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="requests-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- ВКЛАДКА: СКЛАД -->
+    <div id="tab-stock" style="display: none;">
+      <h2>Запчасти на складе</h2>
+      <table class="admin-table" style="margin-bottom: 20px;">
+        <thead>
+          <tr><th>Название</th><th>Артикул</th><th>Остаток</th><th>Цена</th><th>Поставщик</th><th>Действие</th></tr>
+        </thead>
+        <tbody id="parts-tbody"></tbody>
+      </table>
+
+      <div style="display: flex; gap: 40px;">
+        <div>
+          <h3>Поставка (приход)</h3>
+          <form id="supply-form" onsubmit="supplyPart(event)">
+            <select name="part_id" id="supply-part-select" required></select>
+            <input type="number" name="quantity" placeholder="Кол-во" required style="width: 80px;">
+            <button type="submit">Добавить</button>
+          </form>
+        </div>
+
+        <div>
+          <h3>Создать заказ поставщику</h3>
+          <form id="order-form" onsubmit="createOrder(event)">
+            <select name="supplier_id" id="order-supplier-select" required></select>
+            <select name="part_id" id="order-part-select" required></select>
+            <input type="number" name="quantity" placeholder="Кол-во" required style="width: 80px;">
+            <button type="submit">Заказать</button>
+          </form>
+          <p><small>Для простоты: 1 заказ = 1 позиция. Номера заказов смотрите в БД.</small></p>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -131,6 +163,76 @@
       await fetch('/api/auth/logout', { method: 'POST' });
       window.location.href = '/login.html';
     });
+
+        // === ЛОГИКА ВКЛАДОК ===
+    function switchTab(tab) {
+      document.getElementById('tab-requests').style.display = tab === 'requests' ? 'block' : 'none';
+      document.getElementById('tab-stock').style.display = tab === 'stock' ? 'block' : 'none';
+      document.getElementById('tab-btn-requests').style.background = tab === 'requests' ? '#2980b9' : '#7f8c8d';
+      document.getElementById('tab-btn-stock').style.background = tab === 'stock' ? '#2980b9' : '#7f8c8d';
+      if (tab === 'stock') loadStock();
+    }
+
+    // === ЛОГИКА СКЛАДА ===
+    let partsList = [];
+    let suppliersList = [];
+
+    async function loadStock() {
+      // Загружаем запчасти
+      const pRes = await fetch('/api/admin/parts');
+      const pData = await pRes.json();
+      partsList = pData.parts;
+
+      document.getElementById('parts-tbody').innerHTML = partsList.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.article || '-'}</td>
+          <td style="color: ${p.quantity <= p.min_quantity ? 'red' : 'black'}; font-weight: ${p.quantity <= p.min_quantity ? 'bold' : 'normal'}">${p.quantity}</td>
+          <td>${p.price} ₽</td>
+          <td>${p.supplier_name || '-'}</td>
+          <td>—</td>
+        </tr>
+      `).join('');
+
+      // Заполняем селекты
+      const partOptions = partsList.map(p => `<option value="${p.part_id}">${p.name} (${p.quantity} шт)</option>`).join('');
+      document.getElementById('supply-part-select').innerHTML = partOptions;
+      document.getElementById('order-part-select').innerHTML = partOptions;
+
+      // Загружаем поставщиков
+      const sRes = await fetch('/api/admin/suppliers');
+      const sData = await sRes.json();
+      suppliersList = sData.suppliers;
+      document.getElementById('order-supplier-select').innerHTML = 
+        suppliersList.map(s => `<option value="${s.supplier_id}">${s.name}</option>`).join('');
+    }
+
+    async function supplyPart(e) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch(`/api/admin/parts/${form.part_id.value}/supply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: Number(form.quantity.value) })
+      });
+      form.reset();
+      loadStock(); // обновляем таблицу
+    }
+
+    async function createOrder(e) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          supplier_id: Number(form.supplier_id.value),
+          items: [{ part_id: Number(form.part_id.value), quantity: Number(form.quantity.value) }]
+        })
+      });
+      form.reset();
+      alert('Заказ создан! (Для получения заказа используйте SQL UPDATE или следующий этап)');
+    }
 
     // Инициализация
     (async () => {
