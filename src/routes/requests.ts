@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireRole } from '../middleware/auth';
-import { createRequest, getClientRequests, getRequestDetails, cancelRequest } from '../services/requestService';
 import { AppError } from '../middleware/errorHandler';
+import { createRequest, getClientRequests, getRequestDetails, cancelRequest, payRequest, rateMaster } from '../services/requestService';
 
 export const requestsRouter = Router();
 
@@ -42,6 +42,28 @@ requestsRouter.get('/:id', async (req, res, next) => {
 requestsRouter.post('/:id/cancel', async (req, res, next) => {
   try {
     await cancelRequest(Number(req.params.id), req.session.user!.id);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+requestsRouter.post('/:id/payment', async (req, res, next) => {
+  try {
+    const { amount, method } = req.body;
+    if (!amount || !method) throw new AppError('Укажите сумму и способ оплаты', 400);
+    await payRequest(req.session.user!.id, Number(req.params.id), { amount, method });
+    res.json({ status: 'ok' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+requestsRouter.post('/:id/rating', async (req, res, next) => {
+  try {
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) throw new AppError('Оценка от 1 до 5', 400);
+    await rateMaster(req.session.user!.id, Number(req.params.id), rating);
     res.json({ status: 'ok' });
   } catch (err) {
     next(err);

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Мои заявки</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Ремонт цифровой техники</h1>
+    <nav>
+      <a href="/">Главная</a>
+      <a href="/create-request.html">Новая заявка</a>
+      <a href="#" id="logout">Выйти</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Мои заявки</h2>
+    <div id="requests-list">Загрузка...</div>
+  </main>
+
+  <script>
+    async function loadRequests() {
+      const container = document.getElementById('requests-list');
+      try {
+        const res = await fetch('/api/requests');
+        if (res.status === 401) {
+          container.innerHTML = '<p>Пожалуйста, <a href="/login.html">войдите</a>.</p>';
+          return;
+        }
+        const data = await res.json();
+        
+        if (data.requests.length === 0) {
+          container.innerHTML = '<p>У вас пока нет заявок. <a href="/create-request.html">Создать</a></p>';
+          return;
+        }
+
+        container.innerHTML = data.requests.map(r => `
+          <div class="request-card">
+            <h3>Заявка №${r.request_id}</h3>
+            <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''}</p>
+            <p><b>Неисправность:</b> ${r.problem_description}</p>
+            <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
+            ${r.total_cost ? `<p><b>Стоимость:</b> ${r.total_cost} ₽</p>` : ''}
+            
+            ${r.status_name === 'Готово' ? `
+              <form onsubmit="payRequest(event, ${r.request_id})" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">
+                <p><b>Оплата ремонта</b></p>
+                <input type="number" name="amount" placeholder="Сумма" value="${r.total_cost || ''}" required style="width: 100px;">
+                <select name="method" required>
+                  <option value="card">Карта</option>
+                  <option value="cash">Наличные</option>
+                </select>
+                <button type="submit" style="background: #27ae60;">Оплатить</button>
+              </form>
+            ` : ''}
+
+            ${r.status_name === 'Оплачено' ? `
+              <form onsubmit="rateMaster(event, ${r.request_id})" style="margin-top: 10px; background: #fcf3cf; padding: 10px; border-radius: 4px;">
+                <p><b>Оцените работу мастера:</b></p>
+                <select name="rating" required>
+                  <option value="5">5 (Отлично)</option>
+                  <option value="4">4 (Хорошо)</option>
+                  <option value="3">3 (Нормально)</option>
+                  <option value="2">2 (Плохо)</option>
+                  <option value="1">1 (Ужасно)</option>
+                </select>
+                <button type="submit">Отправить оценку</button>
+              </form>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<p>Ошибка загрузки.</p>';
+      }
+    }
+
+    async function payRequest(e, id) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch(`/api/requests/${id}/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(form.amount.value),
+          method: form.method.value,
+        }),
+      });
+      loadRequests();
+    }
+
+    async function rateMaster(e, id) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch(`/api/requests/${id}/rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: Number(form.rating.value) }),
+      });
+      alert('Спасибо за оценку!');
+      loadRequests();
+    }
+
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    loadRequests();
+  </script>
+</body>
+</html>

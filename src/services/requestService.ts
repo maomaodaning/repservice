@@ -133,3 +133,75 @@ export async function cancelRequest(requestId: number, clientId: number) {
     [cancelStatusId, requestId]
   );
 }
+
+export async function payRequest(clientId: number, requestId: number, data: {
+  amount: number;
+  method: string;
+}) {
+  const check = await pool.query(
+    `SELECT r.request_id, s.name AS status_name 
+     FROM request r JOIN status s ON s.status_id = r.status_id 
+     WHERE r.request_id = $1 AND r.client_id = $2`,
+    [requestId, clientId]
+  );
+  
+  if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
+  if (check.rows[0].status_name !== 'Готово') {
+    throw new AppError('Оплатить можно только готовую заявку', 400);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `INSERT INTO payment (request_id, amount, method, status) VALUES ($1, $2, $3, 'completed')`,
+      [requestId, data.amount, data.method]
+    );
+
+    await client.query(
+      `UPDATE request SET status_id = (SELECT status_id FROM status WHERE name = 'Оплачено') WHERE request_id = $1`,
+      [requestId]
+    );
+
+    await client.query('COMMIT');
+    return { status: 'ok' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function rateMaster(clientId: number, requestId: number, rating: number) {
+  // проверяем, что заявка принадлежит клиенту и она оплачена
+  const check = await pool.query(
+    `SELECT r.master_id, s.name AS status_name 
+     FROM request r JOIN status s ON s.status_id = r.status_id 
+     WHERE r.request_id = $1 AND r.client_id = $2`,
+    [requestId, clientId]
+  );
+
+  if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
+  if (check.rows[0].status_name !== 'Оплачено') {
+    throw new AppError('Оценить ремонт можно только после оплаты', 400);
+  }
+  
+  const masterId = check.rows[0].master_id;
+  if (!masterId) throw new AppError('Мастер не назначен', 400);
+
+  // Обновляем рейтинг мастера (простое среднее: (старый + новый) / 2)
+  // В идеале нужно хранить все оценки, но мы договорились без отдельной таблицы
+  await pool.query(
+    `UPDATE master 
+     SET rating = CASE 
+       WHEN rating = 0 THEN $1 
+       ELSE ROUND((rating + $1) / 2, 2) 
+     END
+     WHERE master_id = $2`,
+    [rating, masterId]
+  );
+  
+  return { status: 'ok' };
+}
