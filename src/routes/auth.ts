@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, registerClient } from '../services/authService';
 import { AppError } from '../middleware/errorHandler';
+import { pool } from '../db/pool';
 
 export const authRouter = Router();
 
@@ -37,9 +38,22 @@ authRouter.post('/logout', (req, res) => {
   });
 });
 
-authRouter.get('/me', (req, res) => {
+authRouter.get('/me', async (req, res, next) => {
   if (!req.session.user) {
     return res.json({ user: null });
   }
-  res.json({ user: req.session.user });
+  
+  const { id, role } = req.session.user;
+  let login = '';
+  
+  try {
+    const table = role === 'client' ? 'client' : role === 'master' ? 'master' : 'admin';
+    const idCol = role === 'client' ? 'client_id' : role === 'master' ? 'master_id' : 'admin_id';
+    const result = await pool.query(`SELECT login FROM ${table} WHERE ${idCol} = $1`, [id]);
+    login = result.rows[0]?.login || '';
+  } catch (e) {
+    console.error('Ошибка получения логина', e);
+  }
+
+  res.json({ user: { id, role, login } });
 });

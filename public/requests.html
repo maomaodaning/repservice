@@ -6,36 +6,41 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <header>
-    <h1>Ремонт цифровой техники</h1>
-    <nav>
-      <a href="/">Главная</a>
-      <a href="/create-request.html">Новая заявка</a>
-      <a href="#" id="logout">Выйти</a>
-    </nav>
-  </header>
+  <header></header>
 
   <main>
     <h2>Мои заявки</h2>
     <div id="requests-list">Загрузка...</div>
   </main>
 
+  <script src="/js/header.js"></script>
   <script>
     async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
         const res = await fetch('/api/requests');
-        if (res.status === 401) {
-          container.innerHTML = '<p>Пожалуйста, <a href="/login.html">войдите</a>.</p>';
+        
+        // Если не авторизован
+        if (res.status === 401 || res.status === 403) {
+          container.innerHTML = '<p>Пожалуйста, <a href="/login.html">войдите</a> как клиент.</p>';
           return;
         }
+
         const data = await res.json();
         
-        if (data.requests.length === 0) {
+        // Если бэкенд вернул ошибку
+        if (data.error) {
+          container.innerHTML = `<p style="color:red">Ошибка: ${data.error.message}</p>`;
+          return;
+        }
+
+        // Если заявок нет
+        if (!data.requests || data.requests.length === 0) {
           container.innerHTML = '<p>У вас пока нет заявок. <a href="/create-request.html">Создать</a></p>';
           return;
         }
 
+        // Отрисовка
         container.innerHTML = data.requests.map(r => `
           <div class="request-card">
             <h3>Заявка №${r.request_id}</h3>
@@ -72,14 +77,15 @@
           </div>
         `).join('');
       } catch (err) {
-        container.innerHTML = '<p>Ошибка загрузки.</p>';
+        console.error(err);
+        container.innerHTML = '<p style="color:red">Ошибка сети. Проверьте консоль (F12).</p>';
       }
     }
 
     async function payRequest(e, id) {
       e.preventDefault();
       const form = e.target;
-      await fetch(`/api/requests/${id}/payment`, {
+      const res = await fetch(`/api/requests/${id}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,27 +93,31 @@
           method: form.method.value,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка оплаты');
+      }
       loadRequests();
     }
 
     async function rateMaster(e, id) {
       e.preventDefault();
       const form = e.target;
-      await fetch(`/api/requests/${id}/rating`, {
+      const res = await fetch(`/api/requests/${id}/rating`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: Number(form.rating.value) }),
       });
-      alert('Спасибо за оценку!');
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка оценки');
+      } else {
+        alert('Спасибо за оценку!');
+      }
       loadRequests();
     }
 
-    document.getElementById('logout').addEventListener('click', async (e) => {
-      e.preventDefault();
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    });
-
+    // Запускаем загрузку
     loadRequests();
   </script>
 </body>

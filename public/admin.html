@@ -11,14 +11,7 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Ремонт цифровой техники (Админ)</h1>
-    <nav>
-      <a href="/">Главная</a>
-      <a href="#" id="logout">Выйти</a>
-    </nav>
-  </header>
-
+  <header></header>
   <main style="max-width: 1200px;">
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
       <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;">Заявки</button>
@@ -284,17 +277,12 @@
       `).join('') || '<tr><td colspan="4">Нет данных</td></tr>';
     }
 
-    document.getElementById('logout').addEventListener('click', async (e) => {
-      e.preventDefault();
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    });
-
     // Инициализация
     (async () => {
       await loadMasters();
       await loadRequests();
     })();
   </script>
+  <script src="/js/header.js"></script>
 </body>
 </html>
