@@ -19,16 +19,16 @@
     </nav>
   </header>
 
-    <main style="max-width: 1200px;">
+  <main style="max-width: 1200px;">
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
       <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;">Заявки</button>
       <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
+      <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Отчёты</button>
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
     <div id="tab-requests">
       <h2>Все заявки</h2>
-      <!-- ... существующий код с фильтром и таблицей заявок ... -->
       <div style="margin-bottom: 1rem;">
         <label>Фильтр по статусу: 
           <select id="filter-status" onchange="loadRequests()">
@@ -80,14 +80,45 @@
             <input type="number" name="quantity" placeholder="Кол-во" required style="width: 80px;">
             <button type="submit">Заказать</button>
           </form>
-          <p><small>Для простоты: 1 заказ = 1 позиция. Номера заказов смотрите в БД.</small></p>
+          <p><small>Для простоты: 1 заказ = 1 позиция.</small></p>
         </div>
+      </div>
+    </div>
+
+    <!-- ВКЛАДКА: ОТЧЁТЫ -->
+    <div id="tab-reports" style="display: none;">
+      <h2>Аналитика</h2>
+      
+      <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
+        <h3>Выручка</h3>
+        <table class="admin-table" id="revenue-table">
+          <thead><tr><th>Дата</th><th>Сумма (₽)</th><th>Кол-во оплат</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
+        <h3>Статистика заявок по статусам</h3>
+        <table class="admin-table" id="requests-report-table">
+          <thead><tr><th>Статус</th><th>Количество</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="background: white; padding: 15px; border-radius: 6px;">
+        <h3>Загрузка мастеров</h3>
+        <table class="admin-table" id="masters-report-table">
+          <thead><tr><th>Мастер</th><th>Рейтинг</th><th>Всего заявок</th><th>Завершено</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </main>
 
   <script>
     let mastersList = [];
+    let partsList = [];
+    let suppliersList = [];
 
     async function loadMasters() {
       const res = await fetch('/api/admin/masters');
@@ -117,7 +148,6 @@
         }
 
         tbody.innerHTML = data.requests.map(r => {
-          // Генерируем опции для выбора мастера
           const options = mastersList.map(m => 
             `<option value="${m.master_id}" ${r.master_id === m.master_id ? 'selected' : ''}>${m.full_name}</option>`
           ).join('');
@@ -152,33 +182,26 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ master_id: Number(masterId) }),
         });
-        loadRequests(); // обновляем таблицу
+        loadRequests();
       } catch (err) {
         alert('Ошибка при назначении мастера');
       }
     }
 
-    document.getElementById('logout').addEventListener('click', async (e) => {
-      e.preventDefault();
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    });
-
-        // === ЛОГИКА ВКЛАДОК ===
     function switchTab(tab) {
       document.getElementById('tab-requests').style.display = tab === 'requests' ? 'block' : 'none';
       document.getElementById('tab-stock').style.display = tab === 'stock' ? 'block' : 'none';
+      document.getElementById('tab-reports').style.display = tab === 'reports' ? 'block' : 'none';
+      
       document.getElementById('tab-btn-requests').style.background = tab === 'requests' ? '#2980b9' : '#7f8c8d';
       document.getElementById('tab-btn-stock').style.background = tab === 'stock' ? '#2980b9' : '#7f8c8d';
+      document.getElementById('tab-btn-reports').style.background = tab === 'reports' ? '#2980b9' : '#7f8c8d';
+      
       if (tab === 'stock') loadStock();
+      if (tab === 'reports') loadReports();
     }
 
-    // === ЛОГИКА СКЛАДА ===
-    let partsList = [];
-    let suppliersList = [];
-
     async function loadStock() {
-      // Загружаем запчасти
       const pRes = await fetch('/api/admin/parts');
       const pData = await pRes.json();
       partsList = pData.parts;
@@ -194,12 +217,10 @@
         </tr>
       `).join('');
 
-      // Заполняем селекты
       const partOptions = partsList.map(p => `<option value="${p.part_id}">${p.name} (${p.quantity} шт)</option>`).join('');
       document.getElementById('supply-part-select').innerHTML = partOptions;
       document.getElementById('order-part-select').innerHTML = partOptions;
 
-      // Загружаем поставщиков
       const sRes = await fetch('/api/admin/suppliers');
       const sData = await sRes.json();
       suppliersList = sData.suppliers;
@@ -216,7 +237,7 @@
         body: JSON.stringify({ quantity: Number(form.quantity.value) })
       });
       form.reset();
-      loadStock(); // обновляем таблицу
+      loadStock();
     }
 
     async function createOrder(e) {
@@ -231,8 +252,43 @@
         })
       });
       form.reset();
-      alert('Заказ создан! (Для получения заказа используйте SQL UPDATE или следующий этап)');
+      alert('Заказ создан!');
     }
+
+    async function loadReports() {
+      const revRes = await fetch('/api/admin/reports/revenue');
+      const revData = await revRes.json();
+      document.querySelector('#revenue-table tbody').innerHTML = revData.report.map(r => `
+        <tr>
+          <td>${new Date(r.date).toLocaleDateString('ru-RU')}</td>
+          <td>${r.total_amount} ₽</td>
+          <td>${r.payments_count}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="3">Нет данных</td></tr>';
+
+      const reqRes = await fetch('/api/admin/reports/requests');
+      const reqData = await reqRes.json();
+      document.querySelector('#requests-report-table tbody').innerHTML = reqData.report.map(r => `
+        <tr><td>${r.status_name}</td><td>${r.count}</td></tr>
+      `).join('') || '<tr><td colspan="2">Нет данных</td></tr>';
+
+      const masRes = await fetch('/api/admin/reports/masters');
+      const masData = await masRes.json();
+      document.querySelector('#masters-report-table tbody').innerHTML = masData.report.map(m => `
+        <tr>
+          <td>${m.full_name}</td>
+          <td>${m.rating || '—'}</td>
+          <td>${m.total_requests}</td>
+          <td>${m.completed_requests}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="4">Нет данных</td></tr>';
+    }
+
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
 
     // Инициализация
     (async () => {

@@ -5,6 +5,7 @@ import {
   getAllParts, createPart, supplyPart, getAllSuppliers,
   createPurchaseOrder, receivePurchaseOrder
 } from '../services/adminService';
+import { getRevenueReport, getRequestsReport, getMastersWorkload } from '../services/reportService';
 
 export const adminRouter = Router();
 
@@ -100,5 +101,30 @@ adminRouter.put('/orders/:id/receive', async (req, res, next) => {
   try {
     const result = await receivePurchaseOrder(Number(req.params.id));
     res.json(result);
+  } catch (err) { next(err); }
+});
+
+// ===== ОТЧЁТЫ =====
+
+adminRouter.get('/reports/revenue', async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    const data = await getRevenueReport(from as string, to as string);
+    res.json({ report: data });
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/reports/requests', async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    const data = await getRequestsReport(from as string, to as string);
+    res.json({ report: data });
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/reports/masters', async (_req, res, next) => {
+  try {
+    const data = await getMastersWorkload();
+    res.json({ report: data });
   } catch (err) { next(err); }
 });
