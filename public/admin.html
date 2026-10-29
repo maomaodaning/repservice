@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Панель администратора</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .assign-select { padding: 4px; }
+    .admin-table th, .admin-table td { font-size: 14px; padding: 8px; }
+    .status-badge { padding: 2px 8px; border-radius: 12px; background: #eee; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ремонт цифровой техники (Админ)</h1>
+    <nav>
+      <a href="/">Главная</a>
+      <a href="#" id="logout">Выйти</a>
+    </nav>
+  </header>
+
+  <main style="max-width: 1200px;">
+    <h2>Все заявки</h2>
+    
+    <div style="margin-bottom: 1rem;">
+      <label>Фильтр по статусу: 
+        <select id="filter-status" onchange="loadRequests()">
+          <option value="">Все</option>
+          <option value="Новая">Новая</option>
+          <option value="Принята">Принята</option>
+          <option value="В работе">В работе</option>
+          <option value="Готово">Готово</option>
+          <option value="Оплачено">Оплачено</option>
+          <option value="Выдано">Выдано</option>
+        </select>
+      </label>
+    </div>
+
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Клиент</th>
+          <th>Устройство</th>
+          <th>Неисправность</th>
+          <th>Статус</th>
+          <th>Мастер</th>
+          <th>Действие</th>
+        </tr>
+      </thead>
+      <tbody id="requests-tbody">
+        <tr><td colspan="7">Загрузка...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script>
+    let mastersList = [];
+
+    async function loadMasters() {
+      const res = await fetch('/api/admin/masters');
+      if (res.ok) {
+        const data = await res.json();
+        mastersList = data.masters;
+      }
+    }
+
+    async function loadRequests() {
+      const tbody = document.getElementById('requests-tbody');
+      const statusFilter = document.getElementById('filter-status').value;
+      const url = statusFilter ? `/api/admin/requests?status=${encodeURIComponent(statusFilter)}` : '/api/admin/requests';
+
+      try {
+        const res = await fetch(url);
+        if (res.status === 401 || res.status === 403) {
+          tbody.innerHTML = '<tr><td colspan="7">Доступ запрещён. <a href="/login.html">Войдите как админ</a></td></tr>';
+          return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.requests.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7">Заявок нет</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.requests.map(r => {
+          // Генерируем опции для выбора мастера
+          const options = mastersList.map(m => 
+            `<option value="${m.master_id}" ${r.master_id === m.master_id ? 'selected' : ''}>${m.full_name}</option>`
+          ).join('');
+
+          return `
+            <tr>
+              <td>${r.request_id}</td>
+              <td>${r.client_name}</td>
+              <td>${r.device_type} ${r.device_brand || ''}</td>
+              <td>${r.problem_description.substring(0, 50)}...</td>
+              <td><span class="status-badge">${r.status_name}</span></td>
+              <td>${r.master_name || '<i>не назначен</i>'}</td>
+              <td>
+                <select class="assign-select" onchange="assignMaster(${r.request_id}, this.value)">
+                  <option value="">-- Назначить --</option>
+                  ${options}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7">Ошибка загрузки</td></tr>';
+      }
+    }
+
+    async function assignMaster(requestId, masterId) {
+      if (!masterId) return;
+      try {
+        await fetch(`/api/admin/requests/${requestId}/assign`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ master_id: Number(masterId) }),
+        });
+        loadRequests(); // обновляем таблицу
+      } catch (err) {
+        alert('Ошибка при назначении мастера');
+      }
+    }
+
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    // Инициализация
+    (async () => {
+      await loadMasters();
+      await loadRequests();
+    })();
+  </script>
+</body>
+</html>
