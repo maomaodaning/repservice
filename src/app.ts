@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { servicesRouter } from './routes/services';
 import { profileRouter } from './routes/profile';
 import { requestsRouter } from './routes/requests';
+import { masterRouter } from './routes/master';
 
 export const app = express();
 
@@ -39,5 +40,6 @@ app.use('/api/auth', authRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/requests', requestsRouter);
+app.use('/api/master', masterRouter);
 
 app.use(errorHandler);

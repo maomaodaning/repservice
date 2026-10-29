@@ -37,7 +37,6 @@ export async function authenticate(login: string, password: string) {
 
   return { id: user.id, role: user.role };
 }
-
 export async function registerClient(data: {
   full_name: string;
   phone: string;

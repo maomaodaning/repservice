@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Кабинет мастера</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Ремонт цифровой техники</h1>
+    <nav>
+      <a href="/">Главная</a>
+      <a href="#" id="logout">Выйти</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Мои заявки</h2>
+    <div id="requests-list"></div>
+  </main>
+
+  <script>
+    async function loadRequests() {
+      const container = document.getElementById('requests-list');
+      try {
+        const res = await fetch('/api/master/requests');
+        if (res.status === 401 || res.status === 403) {
+          container.innerHTML = '<p>Требуется вход как мастер. <a href="/login.html">Войти</a></p>';
+          return;
+        }
+        const data = await res.json();
+        
+        if (data.requests.length === 0) {
+          container.innerHTML = '<p>Нет назначенных заявок.</p>';
+          return;
+        }
+
+        container.innerHTML = data.requests.map(r => `
+          <div class="request-card">
+            <h3>Заявка №${r.request_id}</h3>
+            <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''} ${r.device_model || ''}</p>
+            <p><b>Неисправность:</b> ${r.problem_description}</p>
+            <p><b>Статус:</b> ${r.status_name}</p>
+            
+            <div class="actions">
+              <label>Сменить статус:
+                <select onchange="updateStatus(${r.request_id}, this.value)">
+                  <option value="">--</option>
+                  <option value="Принята">Принята</option>
+                  <option value="В работе">В работе</option>
+                  <option value="Готово">Готово</option>
+                </select>
+              </label>
+            </div>
+            
+            <details style="margin-top: 10px;">
+              <summary>Провести диагностику</summary>
+              <form onsubmit="submitDiagnostic(event, ${r.request_id})" style="margin-top: 10px;">
+                <textarea name="result" placeholder="Результат" required></textarea><br>
+                <textarea name="recommended_actions" placeholder="Рекомендации"></textarea><br>
+                <input type="number" name="estimated_cost" placeholder="Предв. стоимость"><br>
+                <button type="submit">Сохранить</button>
+              </form>
+            </details>
+            
+            <details style="margin-top: 10px;">
+              <summary>Внести отчёт о работах</summary>
+              <form onsubmit="submitReport(event, ${r.request_id})" style="margin-top: 10px;">
+                <textarea name="work_description" placeholder="Что сделано" required></textarea><br>
+                <input type="number" name="labor_cost" placeholder="Стоимость работ" required><br>
+                <button type="submit">Сохранить</button>
+              </form>
+            </details>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<p>Ошибка загрузки.</p>';
+      }
+    }
+
+    async function updateStatus(id, status) {
+      if (!status) return;
+      await fetch(`/api/master/requests/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      loadRequests();
+    }
+
+    async function submitDiagnostic(e, id) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch(`/api/master/requests/${id}/diagnostic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result: form.result.value,
+          recommended_actions: form.recommended_actions.value,
+          estimated_cost: form.estimated_cost.value ? Number(form.estimated_cost.value) : undefined,
+        }),
+      });
+      form.reset();
+      alert('Диагностика сохранена');
+    }
+
+    async function submitReport(e, id) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch(`/api/master/requests/${id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_description: form.work_description.value,
+          labor_cost: Number(form.labor_cost.value),
+        }),
+      });
+      form.reset();
+      alert('Отчёт сохранён');
+      loadRequests();
+    }
+
+    document.getElementById('logout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    loadRequests();
+  </script>
+</body>
+</html>
