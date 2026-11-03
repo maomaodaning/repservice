@@ -9,7 +9,7 @@ export async function getMasterRequests(masterId: number, statusName?: string) {
     FROM request r
     JOIN status s ON s.status_id = r.status_id
     JOIN device d ON d.device_id = r.device_id
-    WHERE r.master_id = $1
+    WHERE r.master_id = $1 AND s.name != 'Выдано'  -- ДОБАВИЛИ ЭТО УСЛОВИЕ
   `;
   const params: any[] = [masterId];
 
@@ -100,4 +100,27 @@ export async function createReport(masterId: number, requestId: number, data: {
   );
 
   return res.rows[0];
+}
+
+export async function getMasterReports(masterId: number) {
+  const query = `
+    SELECT 
+      wr.report_id,
+      wr.report_date,
+      wr.work_description,
+      wr.labor_cost,
+      r.request_id,
+      r.problem_description,
+      d.type AS device_type,
+      d.brand AS device_brand,
+      s.name AS status_name
+    FROM work_report wr
+    JOIN request r ON r.request_id = wr.request_id
+    JOIN device d ON d.device_id = r.device_id
+    JOIN status s ON s.status_id = r.status_id
+    WHERE wr.master_id = $1
+    ORDER BY wr.report_date DESC
+  `;
+  const result = await pool.query(query, [masterId]);
+  return result.rows;
 }

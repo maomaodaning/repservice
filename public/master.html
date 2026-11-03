@@ -7,16 +7,22 @@
 </head>
 <body>
   <header></header>
-    <main>
+  
+  <main>
+    <!-- Навигация по вкладкам -->
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
       <button onclick="switchMasterTab('requests')" id="m-tab-btn-requests" style="background: #2980b9;">Мои заявки</button>
       <button onclick="switchMasterTab('diagnostics')" id="m-tab-btn-diagnostics" style="background: #7f8c8d;">Все диагностики</button>
+      <button onclick="switchMasterTab('reports')" id="m-tab-btn-reports" style="background: #7f8c8d;">Мои отчёты</button>
     </div>
 
+    <!-- Вкладка 1: Заявки -->
     <div id="m-tab-requests">
-      <div id="requests-list"></div>
+      <h2>Заявки в работе</h2>
+      <div id="requests-list">Загрузка...</div>
     </div>
 
+    <!-- Вкладка 2: Диагностики -->
     <div id="m-tab-diagnostics" style="display: none;">
       <h2>Все диагностики в системе</h2>
       <table class="admin-table" style="width: 100%;">
@@ -26,9 +32,41 @@
         <tbody id="m-diagnostics-tbody"></tbody>
       </table>
     </div>
+
+    <!-- Вкладка 3: Отчёты -->
+    <div id="m-tab-reports" style="display: none;">
+      <h2>История моих отчётов</h2>
+      <table class="admin-table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Заявка</th>
+            <th>Устройство</th>
+            <th>Что сделано</th>
+            <th>Стоимость работ</th>
+            <th>Статус заявки</th>
+          </tr>
+        </thead>
+        <tbody id="m-reports-tbody"></tbody>
+      </table>
+    </div>
   </main>
 
   <script>
+    // === ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
+    function switchMasterTab(tab) {
+      ['requests', 'diagnostics', 'reports'].forEach(t => {
+        const el = document.getElementById(`m-tab-${t}`);
+        const btn = document.getElementById(`m-tab-btn-${t}`);
+        if (el) el.style.display = t === tab ? 'block' : 'none';
+        if (btn) btn.style.background = t === tab ? '#2980b9' : '#7f8c8d';
+      });
+      
+      if (tab === 'diagnostics') loadMasterDiagnostics();
+      if (tab === 'reports') loadMasterReports();
+    }
+
+    // === ВКЛАДКА 1: ЗАЯВКИ ===
     async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
@@ -49,7 +87,7 @@
             <h3>Заявка №${r.request_id}</h3>
             <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''} ${r.device_model || ''}</p>
             <p><b>Неисправность:</b> ${r.problem_description}</p>
-            <p><b>Статус:</b> ${r.status_name}</p>
+            <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
             
             <!-- Блок для вывода ошибки -->
             <div id="error-${r.request_id}" style="display: none; background: #fadbd8; color: #922b21; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 14px;"></div>
@@ -160,16 +198,7 @@
       }
     }
 
-        function switchMasterTab(tab) {
-      document.getElementById('m-tab-requests').style.display = tab === 'requests' ? 'block' : 'none';
-      document.getElementById('m-tab-diagnostics').style.display = tab === 'diagnostics' ? 'block' : 'none';
-      
-      document.getElementById('m-tab-btn-requests').style.background = tab === 'requests' ? '#2980b9' : '#7f8c8d';
-      document.getElementById('m-tab-btn-diagnostics').style.background = tab === 'diagnostics' ? '#2980b9' : '#7f8c8d';
-      
-      if (tab === 'diagnostics') loadMasterDiagnostics();
-    }
-
+    // === ВКЛАДКА 2: ДИАГНОСТИКИ ===
     async function loadMasterDiagnostics() {
       const res = await fetch('/api/master/diagnostics');
       const data = await res.json();
@@ -191,6 +220,29 @@
       `).join('');
     }
 
+    // === ВКЛАДКА 3: ОТЧЁТЫ ===
+    async function loadMasterReports() {
+      const res = await fetch('/api/master/reports');
+      const data = await res.json();
+      
+      if (!data.reports || data.reports.length === 0) {
+        document.getElementById('m-reports-tbody').innerHTML = '<tr><td colspan="6">Отчётов пока нет</td></tr>';
+        return;
+      }
+
+      document.getElementById('m-reports-tbody').innerHTML = data.reports.map(r => `
+        <tr>
+          <td>${new Date(r.report_date).toLocaleString('ru-RU')}</td>
+          <td>№${r.request_id} (${r.problem_description.substring(0, 20)}...)</td>
+          <td>${r.device_type} ${r.device_brand || ''}</td>
+          <td>${r.work_description}</td>
+          <td style="font-weight: bold;">${r.labor_cost} ₽</td>
+          <td><span class="status-badge">${r.status_name}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Инициализация при загрузке
     loadRequests();
   </script>
   <script src="/js/header.js"></script>
