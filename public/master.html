@@ -29,12 +29,15 @@
         }
 
         container.innerHTML = data.requests.map(r => `
-          <div class="request-card">
+          <div class="request-card" id="request-card-${r.request_id}">
             <h3>Заявка №${r.request_id}</h3>
             <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''} ${r.device_model || ''}</p>
             <p><b>Неисправность:</b> ${r.problem_description}</p>
             <p><b>Статус:</b> ${r.status_name}</p>
             
+            <!-- Блок для вывода ошибки -->
+            <div id="error-${r.request_id}" style="display: none; background: #fadbd8; color: #922b21; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 14px;"></div>
+
             <div class="actions">
               <label>Сменить статус:
                 <select onchange="updateStatus(${r.request_id}, this.value)">
@@ -73,18 +76,35 @@
 
     async function updateStatus(id, status) {
       if (!status) return;
-      await fetch(`/api/master/requests/${id}/status`, {
+      
+      const res = await fetch(`/api/master/requests/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorDiv = document.getElementById(`error-${id}`);
+        if (errorDiv) {
+          errorDiv.textContent = data.error?.message || 'Ошибка при смене статуса';
+          errorDiv.style.display = 'block';
+        }
+        const card = document.querySelector(`#request-card-${id}`);
+        if (card) {
+          const select = card.querySelector('select');
+          if (select) select.value = ''; 
+        }
+        return;
+      }
       loadRequests();
     }
 
     async function submitDiagnostic(e, id) {
       e.preventDefault();
       const form = e.target;
-      await fetch(`/api/master/requests/${id}/diagnostic`, {
+      const res = await fetch(`/api/master/requests/${id}/diagnostic`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,14 +113,20 @@
           estimated_cost: form.estimated_cost.value ? Number(form.estimated_cost.value) : undefined,
         }),
       });
-      form.reset();
-      alert('Диагностика сохранена');
+      if (res.ok) {
+        form.reset();
+        alert('Диагностика сохранена');
+        loadRequests();
+      } else {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка диагностики');
+      }
     }
 
     async function submitReport(e, id) {
       e.preventDefault();
       const form = e.target;
-      await fetch(`/api/master/requests/${id}/report`, {
+      const res = await fetch(`/api/master/requests/${id}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,9 +134,14 @@
           labor_cost: Number(form.labor_cost.value),
         }),
       });
-      form.reset();
-      alert('Отчёт сохранён');
-      loadRequests();
+      if (res.ok) {
+        form.reset();
+        alert('Отчёт сохранён');
+        loadRequests();
+      } else {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка при сохранении отчёта');
+      }
     }
 
     loadRequests();

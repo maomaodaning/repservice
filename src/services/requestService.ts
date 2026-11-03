@@ -134,36 +134,42 @@ export async function cancelRequest(requestId: number, clientId: number) {
   );
 }
 
-export async function payRequest(clientId: number, requestId: number, data: {
-  amount: number;
-  method: string;
-}) {
+export async function payRequest(clientId: number, requestId: number, data: { amount: number; method: string; }) {
   const check = await pool.query(
-    `SELECT r.request_id, s.name AS status_name 
+    `SELECT r.request_id, s.name AS status_name, r.total_cost
      FROM request r JOIN status s ON s.status_id = r.status_id 
      WHERE r.request_id = $1 AND r.client_id = $2`,
     [requestId, clientId]
   );
   
   if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
-  if (check.rows[0].status_name !== 'Готово') {
+  
+  const req = check.rows[0];
+  
+  // 1. Проверка статуса (нельзя оплатить дважды)
+  if (req.status_name === 'Оплачено' || req.status_name === 'Выдано') {
+    throw new AppError('Заявка уже оплачена', 400);
+  }
+  if (req.status_name !== 'Готово') {
     throw new AppError('Оплатить можно только готовую заявку', 400);
+  }
+  
+  // 2. Проверка суммы
+  if (!req.total_cost || Number(req.total_cost) <= 0) {
+    throw new AppError('Неверное значение суммы, обратитесь в сервисный центр', 400);
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
     await client.query(
       `INSERT INTO payment (request_id, amount, method, status) VALUES ($1, $2, $3, 'completed')`,
       [requestId, data.amount, data.method]
     );
-
     await client.query(
       `UPDATE request SET status_id = (SELECT status_id FROM status WHERE name = 'Оплачено') WHERE request_id = $1`,
       [requestId]
     );
-
     await client.query('COMMIT');
     return { status: 'ok' };
   } catch (err) {

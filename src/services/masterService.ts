@@ -53,6 +53,19 @@ export async function updateStatus(masterId: number, requestId: number, statusNa
   if (statusRes.rows.length === 0) throw new AppError('Статус не найден', 400);
   const statusId = statusRes.rows[0].status_id;
 
+  // НОВАЯ ПРОВЕРКА: если ставим "Готово", проверяем отчёт и стоимость
+  if (statusName === 'Готово') {
+    const reportRes = await pool.query(
+      'SELECT labor_cost FROM work_report WHERE request_id = $1',
+      [requestId]
+    );
+    
+    // Если отчёта нет ИЛИ стоимость не указана (null) ИЛИ она <= 0
+    if (reportRes.rows.length === 0 || !reportRes.rows[0].labor_cost || Number(reportRes.rows[0].labor_cost) <= 0) {
+      throw new AppError('Нельзя завершить ремонт без указания стоимости работ. Сначала внесите отчёт.', 400);
+    }
+  }
+
   let completedAtSql = '';
   if (statusName === 'Готово') {
     completedAtSql = ', completed_at = NOW()';

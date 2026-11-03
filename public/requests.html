@@ -46,10 +46,20 @@
             <h3>Заявка №${r.request_id}</h3>
             <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''}</p>
             <p><b>Неисправность:</b> ${r.problem_description}</p>
-            <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
-            ${r.total_cost ? `<p><b>Стоимость:</b> ${r.total_cost} BYN</p>` : ''}
+            <p>
+              <b>Статус:</b> <span class="status-badge">${r.status_name}</span>
+              <span style="margin-left: 10px; font-size: 12px; color: ${r.status_name === 'Оплачено' || r.status_name === 'Выдано' ? 'green' : 'red'};">
+                [${r.status_name === 'Оплачено' || r.status_name === 'Выдано' ? '✓ Оплачено' : '✗ Не оплачено'}]
+              </span>
+            </p>
+            <!-- Вывод стоимости или предупреждения -->
+            ${r.total_cost 
+              ? `<p><b>Стоимость:</b> ${r.total_cost} ₽</p>` 
+              : (r.status_name === 'Готово' ? `<p style="color: red; font-weight: bold;">Стоимость не указана. Обратитесь в сервисный центр.</p>` : '')
+            }
             
-            ${r.status_name === 'Готово' ? `
+            <!-- Форма оплаты: показываем только если цена есть -->
+            ${r.status_name === 'Готово' && r.total_cost ? `
               <form onsubmit="payRequest(event, ${r.request_id})" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">
                 <p><b>Оплата ремонта</b></p>
                 <input type="number" name="amount" placeholder="Сумма" value="${r.total_cost || ''}" required style="width: 100px;">
