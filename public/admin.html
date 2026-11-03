@@ -85,7 +85,7 @@
       <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
         <h3>Выручка</h3>
         <table class="admin-table" id="revenue-table">
-          <thead><tr><th>Дата</th><th>Сумма (₽)</th><th>Кол-во оплат</th></tr></thead>
+          <thead><tr><th>Дата</th><th>Сумма (BYN)</th><th>Кол-во оплат</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -204,7 +204,7 @@
           <td>${p.name}</td>
           <td>${p.article || '-'}</td>
           <td style="color: ${p.quantity <= p.min_quantity ? 'red' : 'black'}; font-weight: ${p.quantity <= p.min_quantity ? 'bold' : 'normal'}">${p.quantity}</td>
-          <td>${p.price} ₽</td>
+          <td>${p.price} BYN</td>
           <td>${p.supplier_name || '-'}</td>
           <td>—</td>
         </tr>
@@ -254,7 +254,7 @@
       document.querySelector('#revenue-table tbody').innerHTML = revData.report.map(r => `
         <tr>
           <td>${new Date(r.date).toLocaleDateString('ru-RU')}</td>
-          <td>${r.total_amount} ₽</td>
+          <td>${r.total_amount} BYN</td>
           <td>${r.payments_count}</td>
         </tr>
       `).join('') || '<tr><td colspan="3">Нет данных</td></tr>';

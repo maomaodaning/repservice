@@ -47,7 +47,7 @@
             <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''}</p>
             <p><b>Неисправность:</b> ${r.problem_description}</p>
             <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
-            ${r.total_cost ? `<p><b>Стоимость:</b> ${r.total_cost} ₽</p>` : ''}
+            ${r.total_cost ? `<p><b>Стоимость:</b> ${r.total_cost} BYN</p>` : ''}
             
             ${r.status_name === 'Готово' ? `
               <form onsubmit="payRequest(event, ${r.request_id})" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">
