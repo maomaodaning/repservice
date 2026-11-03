@@ -9,7 +9,8 @@ export async function getAllRequests(filters?: { status?: string; master_id?: nu
            s.name AS status_name,
            c.full_name AS client_name,
            d.type AS device_type, d.brand AS device_brand, d.model AS device_model,
-           m.full_name AS master_name, r.master_id
+           m.full_name AS master_name, r.master_id,
+           (SELECT SUM(amount) FROM payment WHERE request_id = r.request_id AND status = 'completed') AS paid_amount
     FROM request r
     JOIN status s ON s.status_id = r.status_id
     JOIN client c ON c.client_id = r.client_id
@@ -33,7 +34,6 @@ export async function getAllRequests(filters?: { status?: string; master_id?: nu
   const result = await pool.query(query, params);
   return result.rows;
 }
-
 export async function assignMaster(requestId: number, masterId: number) {
   const res = await pool.query(
     `UPDATE request SET master_id = $1, status_id = (SELECT status_id FROM status WHERE name = 'Принята')
@@ -204,4 +204,15 @@ export async function getAllDiagnostics() {
   `;
   const result = await pool.query(query);
   return result.rows;
+}
+
+export async function updateRequestStatus(requestId: number, statusName: string) {
+  const statusRes = await pool.query('SELECT status_id FROM status WHERE name = $1', [statusName]);
+  if (statusRes.rows.length === 0) throw new AppError('Статус не найден', 400);
+  
+  const res = await pool.query(
+    'UPDATE request SET status_id = $1 WHERE request_id = $2 RETURNING request_id',
+    [statusRes.rows[0].status_id, requestId]
+  );
+  return res.rows[0];
 }

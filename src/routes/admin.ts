@@ -9,6 +9,7 @@ import { getRevenueReport, getRequestsReport, getMastersWorkload } from '../serv
 import { createService, updateService, deleteService } from '../services/adminService';
 import { pool } from '../db/pool';
 import { getAllDiagnostics } from '../services/adminService';
+import { updateRequestStatus } from '../services/adminService';
 
 export const adminRouter = Router();
 
@@ -165,5 +166,14 @@ adminRouter.get('/diagnostics', async (_req, res, next) => {
   try {
     const diagnostics = await getAllDiagnostics();
     res.json({ diagnostics });
+  } catch (err) { next(err); }
+});
+
+adminRouter.put('/requests/:id/status', async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!status) throw new Error('Укажите статус');
+    await updateRequestStatus(Number(req.params.id), status);
+    res.json({ status: 'ok' });
   } catch (err) { next(err); }
 });

@@ -22,29 +22,49 @@
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
+        <!-- ВКЛАДКА: ЗАЯВКИ -->
     <div id="tab-requests">
-      <h2>Все заявки</h2>
-      <div style="margin-bottom: 1rem;">
+      <h2>Активные заявки</h2>
+      
+      <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
         <label>Фильтр по статусу: 
           <select id="filter-status" onchange="loadRequests()">
-            <option value="">Все</option>
+            <option value="">Все (кроме выданных)</option>
             <option value="Новая">Новая</option>
             <option value="Принята">Принята</option>
             <option value="В работе">В работе</option>
             <option value="Готово">Готово</option>
             <option value="Оплачено">Оплачено</option>
-            <option value="Выдано">Выдано</option>
           </select>
         </label>
+
+        <label style="cursor: pointer;">
+          <input type="checkbox" id="show-issued" onchange="loadRequests()"> Показать выданные
+        </label>
       </div>
-      <table class="admin-table">
+
+      <!-- Таблица активных заявок -->
+      <table class="admin-table" id="active-requests-table">
         <thead>
           <tr>
-            <th>ID</th><th>Клиент</th><th>Устройство</th><th>Неисправность</th><th>Статус</th><th>Мастер</th><th>Действие</th>
+            <th>ID</th><th>Клиент</th><th>Устройство</th><th>Неисправность</th><th>Статус</th><th>Мастер</th><th>Действия</th>
           </tr>
         </thead>
         <tbody id="requests-tbody"></tbody>
       </table>
+
+      <!-- Блок с выданными (скрыт по умолчанию) -->
+      <div id="issued-block" style="display: none; margin-top: 40px; opacity: 0.7;">
+        <h2>Выданные заявки (Архив)</h2>
+        <table class="admin-table" style="background: #f9f9f9;">
+          <thead>
+            <tr>
+              <th>ID</th><th>Клиент</th><th>Устройство</th><th>Статус</th><th>Мастер</th><th>Оплачено клиентом</th>
+            </tr>
+          </thead>
+          <tbody id="issued-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ВКЛАДКА: СКЛАД -->
@@ -176,50 +196,100 @@
       }
     }
 
-    async function loadRequests() {
+        async function loadRequests() {
       const tbody = document.getElementById('requests-tbody');
+      const issuedTbody = document.getElementById('issued-tbody');
+      const issuedBlock = document.getElementById('issued-block');
+      const showIssued = document.getElementById('show-issued').checked;
       const statusFilter = document.getElementById('filter-status').value;
-      const url = statusFilter ? `/api/admin/requests?status=${encodeURIComponent(statusFilter)}` : '/api/admin/requests';
-
+      
       try {
-        const res = await fetch(url);
+        // Запрашиваем все заявки (без фильтра по статусу на бэкенде, отфильтруем на клиенте)
+        const res = await fetch('/api/admin/requests');
         if (res.status === 401 || res.status === 403) {
           tbody.innerHTML = '<tr><td colspan="7">Доступ запрещён. <a href="/login.html">Войдите как админ</a></td></tr>';
           return;
         }
         
         const data = await res.json();
-        
-        if (data.requests.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7">Заявок нет</td></tr>';
-          return;
+        let requests = data.requests;
+
+        // Фильтруем на клиенте
+        if (statusFilter) {
+          requests = requests.filter(r => r.status_name === statusFilter);
         }
 
-        tbody.innerHTML = data.requests.map(r => {
-          const options = mastersList.map(m => 
-            `<option value="${m.master_id}" ${r.master_id === m.master_id ? 'selected' : ''}>${m.full_name}</option>`
-          ).join('');
+        // Разделяем на активные и выданные
+        const activeRequests = requests.filter(r => r.status_name !== 'Выдано');
+        const issuedRequests = requests.filter(r => r.status_name === 'Выдано');
 
-          return `
+        // Рендер активных
+        if (activeRequests.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7">Активных заявок нет</td></tr>';
+        } else {
+          tbody.innerHTML = activeRequests.map(r => {
+            const options = mastersList.map(m => 
+              `<option value="${m.master_id}" ${r.master_id === m.master_id ? 'selected' : ''}>${m.full_name}</option>`
+            ).join('');
+
+            // Кнопка "Выдать" доступна только для статуса "Оплачено"
+            const issueBtn = r.status_name === 'Оплачено' 
+              ? `<button onclick="issueRequest(${r.request_id})" style="background: #8e44ad; padding: 4px 8px; font-size: 12px;">Выдать</button>` 
+              : '';
+
+            return `
+              <tr>
+                <td>${r.request_id}</td>
+                <td>${r.client_name}</td>
+                <td>${r.device_type} ${r.device_brand || ''}</td>
+                <td>${r.problem_description.substring(0, 40)}...</td>
+                <td><span class="status-badge">${r.status_name}</span></td>
+                <td>${r.master_name || '<i>не назначен</i>'}</td>
+                <td style="display: flex; gap: 5px; align-items: center;">
+                  <select class="assign-select" onchange="assignMaster(${r.request_id}, this.value)" style="font-size: 12px;">
+                    <option value="">-- Назначить --</option>
+                    ${options}
+                  </select>
+                  ${issueBtn}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        // Рендер выданных
+        if (showIssued && issuedRequests.length > 0) {
+          issuedBlock.style.display = 'block';
+          issuedTbody.innerHTML = issuedRequests.map(r => `
             <tr>
               <td>${r.request_id}</td>
               <td>${r.client_name}</td>
               <td>${r.device_type} ${r.device_brand || ''}</td>
-              <td>${r.problem_description.substring(0, 50)}...</td>
-              <td><span class="status-badge">${r.status_name}</span></td>
-              <td>${r.master_name || '<i>не назначен</i>'}</td>
-              <td>
-                <select class="assign-select" onchange="assignMaster(${r.request_id}, this.value)">
-                  <option value="">-- Назначить --</option>
-                  ${options}
-                </select>
+              <td><span class="status-badge" style="background: #e8f5e9; color: #2e7d32;">${r.status_name}</span></td>
+              <td>${r.master_name || '—'}</td>
+              <td style="font-weight: bold; color: #27ae60;">
+                ${r.paid_amount ? r.paid_amount + ' BYN' : '—'}
               </td>
             </tr>
-          `;
-        }).join('');
+          `).join('');
+        } else {
+          issuedBlock.style.display = 'none';
+        }
+
       } catch (err) {
         tbody.innerHTML = '<tr><td colspan="7">Ошибка загрузки</td></tr>';
       }
+    }
+
+    async function issueRequest(id) {
+      if (!confirm('Подтвердите выдачу устройства клиенту. Заявка уйдёт в архив.')) return;
+      
+      await fetch(`/api/admin/requests/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Выдано' })
+      });
+      loadRequests();
     }
 
     async function assignMaster(requestId, masterId) {
@@ -262,7 +332,7 @@
           <td>${p.name}</td>
           <td>${p.article || '-'}</td>
           <td style="color: ${p.quantity <= p.min_quantity ? 'red' : 'black'}; font-weight: ${p.quantity <= p.min_quantity ? 'bold' : 'normal'}">${p.quantity}</td>
-          <td>${p.price} ₽</td>
+          <td>${p.price} BYN</td>
           <td>${p.supplier_name || '-'}</td>
           <td>—</td>
         </tr>
@@ -423,7 +493,7 @@
           <td>${d.master_name || '<i>не назначен</i>'}</td>
           <td>${d.result}</td>
           <td>${d.recommended_actions || '—'}</td>
-          <td>${d.estimated_cost ? d.estimated_cost + ' ₽' : '—'}</td>
+          <td>${d.estimated_cost ? d.estimated_cost + ' BYN' : '—'}</td>
         </tr>
       `).join('');
     }
