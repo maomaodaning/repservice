@@ -49,6 +49,18 @@
     <!-- ВКЛАДКА: СКЛАД -->
     <div id="tab-stock" style="display: none;">
       <h2>Запчасти на складе</h2>
+        <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+          <h3>Добавить новую запчасть</h3>
+          <form id="new-part-form" onsubmit="createNewPart(event)">
+            <input type="text" name="name" placeholder="Название" required>
+            <input type="text" name="article" placeholder="Артикул">
+            <input type="number" name="quantity" placeholder="Кол-во" required>
+            <input type="number" name="price" placeholder="Цена" required>
+            <input type="number" name="min_quantity" placeholder="Мин. остаток" required>
+            <select name="supplier_id" id="new-part-supplier"></select>
+            <button type="submit">Добавить</button>
+          </form>
+        </div>
       <table class="admin-table" style="margin-bottom: 20px;">
         <thead>
           <tr><th>Название</th><th>Артикул</th><th>Остаток</th><th>Цена</th><th>Поставщик</th><th>Действие</th></tr>
@@ -224,31 +236,44 @@
         if (tab === 'services') loadServices();
       }
 
-    async function loadStock() {
+        async function loadStock() {
+      // загружаем запчасти
       const pRes = await fetch('/api/admin/parts');
       const pData = await pRes.json();
       partsList = pData.parts;
 
+      // отрисовываем таблицу запчастей
       document.getElementById('parts-tbody').innerHTML = partsList.map(p => `
         <tr>
           <td>${p.name}</td>
           <td>${p.article || '-'}</td>
           <td style="color: ${p.quantity <= p.min_quantity ? 'red' : 'black'}; font-weight: ${p.quantity <= p.min_quantity ? 'bold' : 'normal'}">${p.quantity}</td>
-          <td>${p.price} BYN</td>
+          <td>${p.price} ₽</td>
           <td>${p.supplier_name || '-'}</td>
           <td>—</td>
         </tr>
       `).join('');
 
+      // заполняем селекты для запчастей (поставка и создание заказа)
       const partOptions = partsList.map(p => `<option value="${p.part_id}">${p.name} (${p.quantity} шт)</option>`).join('');
       document.getElementById('supply-part-select').innerHTML = partOptions;
       document.getElementById('order-part-select').innerHTML = partOptions;
 
+      // загружаем поставщиков
       const sRes = await fetch('/api/admin/suppliers');
       const sData = await sRes.json();
       suppliersList = sData.suppliers;
+      
+      // заполняем селект для создания заказа
       document.getElementById('order-supplier-select').innerHTML = 
         suppliersList.map(s => `<option value="${s.supplier_id}">${s.name}</option>`).join('');
+
+      // заполняем селект для ДОБАВЛЕНИЯ НОВОЙ ЗАПЧАСТИ (пункт 3)
+      const newPartSuppSelect = document.getElementById('new-part-supplier');
+      if (newPartSuppSelect) {
+        newPartSuppSelect.innerHTML = '<option value="">Без поставщика</option>' + 
+          suppliersList.map(s => `<option value="${s.supplier_id}">${s.name}</option>`).join('');
+      }
     }
 
     async function supplyPart(e) {
@@ -342,6 +367,29 @@
       if (!confirm('Удалить эту услугу?')) return;
       await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
       loadServices();
+    }
+
+        async function createNewPart(e) {
+      e.preventDefault();
+      const form = e.target;
+      const res = await fetch('/api/admin/parts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.value,
+          article: form.article.value,
+          quantity: Number(form.quantity.value),
+          price: Number(form.price.value),
+          min_quantity: Number(form.min_quantity.value),
+          supplier_id: form.supplier_id.value ? Number(form.supplier_id.value) : undefined
+        })
+      });
+      if (res.ok) {
+        form.reset();
+        loadStock(); // обновить таблицу и селекты
+      } else {
+        alert('Ошибка добавления');
+      }
     }
 
     // Инициализация
