@@ -7,9 +7,25 @@
 </head>
 <body>
   <header></header>
-  <main>
-    <h2>Мои заявки</h2>
-    <div id="requests-list"></div>
+    <main>
+    <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+      <button onclick="switchMasterTab('requests')" id="m-tab-btn-requests" style="background: #2980b9;">Мои заявки</button>
+      <button onclick="switchMasterTab('diagnostics')" id="m-tab-btn-diagnostics" style="background: #7f8c8d;">Все диагностики</button>
+    </div>
+
+    <div id="m-tab-requests">
+      <div id="requests-list"></div>
+    </div>
+
+    <div id="m-tab-diagnostics" style="display: none;">
+      <h2>Все диагностики в системе</h2>
+      <table class="admin-table" style="width: 100%;">
+        <thead>
+          <tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Мастер</th><th>Результат</th><th>Предв. стоимость</th></tr>
+        </thead>
+        <tbody id="m-diagnostics-tbody"></tbody>
+      </table>
+    </div>
   </main>
 
   <script>
@@ -142,6 +158,37 @@
         const err = await res.json();
         alert(err.error?.message || 'Ошибка при сохранении отчёта');
       }
+    }
+
+        function switchMasterTab(tab) {
+      document.getElementById('m-tab-requests').style.display = tab === 'requests' ? 'block' : 'none';
+      document.getElementById('m-tab-diagnostics').style.display = tab === 'diagnostics' ? 'block' : 'none';
+      
+      document.getElementById('m-tab-btn-requests').style.background = tab === 'requests' ? '#2980b9' : '#7f8c8d';
+      document.getElementById('m-tab-btn-diagnostics').style.background = tab === 'diagnostics' ? '#2980b9' : '#7f8c8d';
+      
+      if (tab === 'diagnostics') loadMasterDiagnostics();
+    }
+
+    async function loadMasterDiagnostics() {
+      const res = await fetch('/api/master/diagnostics');
+      const data = await res.json();
+      
+      if (!data.diagnostics || data.diagnostics.length === 0) {
+        document.getElementById('m-diagnostics-tbody').innerHTML = '<tr><td colspan="6">Диагностик пока нет</td></tr>';
+        return;
+      }
+
+      document.getElementById('m-diagnostics-tbody').innerHTML = data.diagnostics.map(d => `
+        <tr>
+          <td>${new Date(d.diagnostic_date).toLocaleString('ru-RU')}</td>
+          <td>№${d.request_id} (${d.problem_description.substring(0, 20)}...)</td>
+          <td>${d.client_name}</td>
+          <td>${d.master_name || '<i>не назначен</i>'}</td>
+          <td>${d.result}</td>
+          <td>${d.estimated_cost ? d.estimated_cost + ' ₽' : '—'}</td>
+        </tr>
+      `).join('');
     }
 
     loadRequests();
