@@ -59,7 +59,8 @@ export async function createRequest(clientId: number, data: {
 export async function getClientRequests(clientId: number, statusName?: string) {
   let query = `
     SELECT r.request_id, r.created_at, r.completed_at, r.problem_description,
-           r.total_cost, s.name AS status_name,
+           r.total_cost, r.rating,  -- <-- ДОБАВИЛИ ЭТО ПОЛЕ
+           s.name AS status_name,
            d.type AS device_type, d.brand AS device_brand, d.model AS device_model
     FROM request r
     JOIN status s ON s.status_id = r.status_id
@@ -181,33 +182,58 @@ export async function payRequest(clientId: number, requestId: number, data: { am
 }
 
 export async function rateMaster(clientId: number, requestId: number, rating: number) {
-  // проверяем, что заявка принадлежит клиенту и она оплачена
+  // проверяем, что заявка принадлежит клиенту, она оплачена и ещё не оценена
   const check = await pool.query(
-    `SELECT r.master_id, s.name AS status_name 
+    `SELECT r.master_id, r.rating, s.name AS status_name 
      FROM request r JOIN status s ON s.status_id = r.status_id 
      WHERE r.request_id = $1 AND r.client_id = $2`,
     [requestId, clientId]
   );
 
   if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
-  if (check.rows[0].status_name !== 'Оплачено') {
+  
+  const req = check.rows[0];
+  
+  if (req.status_name !== 'Оплачено' && req.status_name !== 'Выдано') {
     throw new AppError('Оценить ремонт можно только после оплаты', 400);
   }
   
-  const masterId = check.rows[0].master_id;
+  if (req.rating !== null) {
+    throw new AppError('Вы уже оценили эту работу', 400);
+  }
+  
+  const masterId = req.master_id;
   if (!masterId) throw new AppError('Мастер не назначен', 400);
 
-  // Обновляем рейтинг мастера (простое среднее: (старый + новый) / 2)
-  // В идеале нужно хранить все оценки, но мы договорились без отдельной таблицы
-  await pool.query(
-    `UPDATE master 
-     SET rating = CASE 
-       WHEN rating = 0 THEN $1 
-       ELSE ROUND((rating + $1) / 2, 2) 
-     END
-     WHERE master_id = $2`,
-    [rating, masterId]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Сохраняем оценку в заявку
+    await client.query(
+      `UPDATE request SET rating = $1 WHERE request_id = $2`,
+      [rating, requestId]
+    );
+
+    // 2. Обновляем рейтинг мастера (простое среднее)
+    await client.query(
+      `UPDATE master 
+       SET rating = CASE 
+         WHEN rating = 0 THEN $1 
+         ELSE ROUND((rating + $1) / 2, 2) 
+       END
+       WHERE master_id = $2`,
+      [rating, masterId]
+    );
+
+    await client.query('COMMIT');
+    return { status: 'ok' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
   
   return { status: 'ok' };
 }

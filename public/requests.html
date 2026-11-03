@@ -13,14 +13,12 @@
     <div id="requests-list">Загрузка...</div>
   </main>
 
-  <script src="/js/header.js"></script>
   <script>
     async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
         const res = await fetch('/api/requests');
         
-        // Если не авторизован
         if (res.status === 401 || res.status === 403) {
           container.innerHTML = '<p>Пожалуйста, <a href="/login.html">войдите</a> как клиент.</p>';
           return;
@@ -28,37 +26,40 @@
 
         const data = await res.json();
         
-        // Если бэкенд вернул ошибку
         if (data.error) {
           container.innerHTML = `<p style="color:red">Ошибка: ${data.error.message}</p>`;
           return;
         }
 
-        // Если заявок нет
         if (!data.requests || data.requests.length === 0) {
           container.innerHTML = '<p>У вас пока нет заявок. <a href="/create-request.html">Создать</a></p>';
           return;
         }
 
-        // Отрисовка
-        container.innerHTML = data.requests.map(r => `
+        container.innerHTML = data.requests.map(r => {
+          // Определяем статус оплаты
+          const isPaid = r.status_name === 'Оплачено' || r.status_name === 'Выдано';
+          
+          return `
           <div class="request-card">
             <h3>Заявка №${r.request_id}</h3>
-            <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''}</p>
+            <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''} ${r.device_model || ''}</p>
             <p><b>Неисправность:</b> ${r.problem_description}</p>
+            
             <p>
               <b>Статус:</b> <span class="status-badge">${r.status_name}</span>
-              <span style="margin-left: 10px; font-size: 12px; color: ${r.status_name === 'Оплачено' || r.status_name === 'Выдано' ? 'green' : 'red'};">
-                [${r.status_name === 'Оплачено' || r.status_name === 'Выдано' ? '✓ Оплачено' : '✗ Не оплачено'}]
+              <span style="margin-left: 10px; font-size: 12px; color: ${isPaid ? 'green' : 'red'};">
+                [${isPaid ? '✓ Оплачено' : '✗ Не оплачено'}]
               </span>
             </p>
+
             <!-- Вывод стоимости или предупреждения -->
             ${r.total_cost 
               ? `<p><b>Стоимость:</b> ${r.total_cost} ₽</p>` 
               : (r.status_name === 'Готово' ? `<p style="color: red; font-weight: bold;">Стоимость не указана. Обратитесь в сервисный центр.</p>` : '')
             }
             
-            <!-- Форма оплаты: показываем только если цена есть -->
+            <!-- Форма оплаты -->
             ${r.status_name === 'Готово' && r.total_cost ? `
               <form onsubmit="payRequest(event, ${r.request_id})" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">
                 <p><b>Оплата ремонта</b></p>
@@ -71,7 +72,8 @@
               </form>
             ` : ''}
 
-            ${r.status_name === 'Оплачено' ? `
+            <!-- Форма оценки (только если оплачено и еще не оценено) -->
+            ${isPaid && !r.rating ? `
               <form onsubmit="rateMaster(event, ${r.request_id})" style="margin-top: 10px; background: #fcf3cf; padding: 10px; border-radius: 4px;">
                 <p><b>Оцените работу мастера:</b></p>
                 <select name="rating" required>
@@ -84,8 +86,15 @@
                 <button type="submit">Отправить оценку</button>
               </form>
             ` : ''}
+
+            <!-- Сообщение, если оценка уже поставлена -->
+            ${r.rating ? `
+              <p style="color: green; font-weight: bold; margin-top: 10px;">
+                ✓ Вы оценили работу на ${r.rating} из 5.
+              </p>
+            ` : ''}
           </div>
-        `).join('');
+        `}).join('');
       } catch (err) {
         console.error(err);
         container.innerHTML = '<p style="color:red">Ошибка сети. Проверьте консоль (F12).</p>';
@@ -130,5 +139,6 @@
     // Запускаем загрузку
     loadRequests();
   </script>
+  <script src="/js/header.js"></script>
 </body>
 </html>
