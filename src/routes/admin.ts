@@ -6,6 +6,8 @@ import {
   createPurchaseOrder, receivePurchaseOrder
 } from '../services/adminService';
 import { getRevenueReport, getRequestsReport, getMastersWorkload } from '../services/reportService';
+import { createService, updateService, deleteService } from '../services/adminService';
+import { pool } from '../db/pool';
 
 export const adminRouter = Router();
 
@@ -126,5 +128,34 @@ adminRouter.get('/reports/masters', async (_req, res, next) => {
   try {
     const data = await getMastersWorkload();
     res.json({ report: data });
+  } catch (err) { next(err); }
+});
+
+// === УСЛУГИ ===
+adminRouter.get('/services', async (_req, res, next) => {
+  try {
+    const result = await pool.query('SELECT * FROM service ORDER BY name');
+    res.json({ services: result.rows });
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/services', async (req, res, next) => {
+  try { 
+    const service = await createService(req.body); 
+    res.status(201).json({ service }); 
+  } catch (err) { next(err); }
+});
+
+adminRouter.put('/services/:id', async (req, res, next) => {
+  try { 
+    const service = await updateService(Number(req.params.id), req.body); 
+    res.json({ service }); 
+  } catch (err) { next(err); }
+});
+
+adminRouter.delete('/services/:id', async (req, res, next) => {
+  try { 
+    const result = await deleteService(Number(req.params.id)); 
+    res.json(result); 
   } catch (err) { next(err); }
 });

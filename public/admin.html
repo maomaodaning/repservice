@@ -17,6 +17,7 @@
       <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;">Заявки</button>
       <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
       <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Отчёты</button>
+      <button onclick="switchTab('services')" id="tab-btn-services" style="background: #7f8c8d;">Услуги (Прайс)</button>
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
@@ -106,6 +107,28 @@
         </table>
       </div>
     </div>
+
+        <!-- ВКЛАДКА: УСЛУГИ -->
+    <div id="tab-services" style="display: none;">
+      <h2>Управление прайс-листом</h2>
+      
+      <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h3>Добавить новую услугу</h3>
+        <form id="service-form" onsubmit="createService(event)">
+          <input type="text" name="name" placeholder="Название" required>
+          <input type="number" name="price" placeholder="Цена" required>
+          <input type="number" name="duration" placeholder="Длительность (мин)" required>
+          <button type="submit">Добавить</button>
+        </form>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr><th>Название</th><th>Цена (BYN)</th><th>Длительность (мин)</th><th>Действие</th></tr>
+        </thead>
+        <tbody id="services-tbody"></tbody>
+      </table>
+    </div>
   </main>
 
   <script>
@@ -181,18 +204,25 @@
       }
     }
 
-    function switchTab(tab) {
-      document.getElementById('tab-requests').style.display = tab === 'requests' ? 'block' : 'none';
-      document.getElementById('tab-stock').style.display = tab === 'stock' ? 'block' : 'none';
-      document.getElementById('tab-reports').style.display = tab === 'reports' ? 'block' : 'none';
-      
-      document.getElementById('tab-btn-requests').style.background = tab === 'requests' ? '#2980b9' : '#7f8c8d';
-      document.getElementById('tab-btn-stock').style.background = tab === 'stock' ? '#2980b9' : '#7f8c8d';
-      document.getElementById('tab-btn-reports').style.background = tab === 'reports' ? '#2980b9' : '#7f8c8d';
-      
-      if (tab === 'stock') loadStock();
-      if (tab === 'reports') loadReports();
-    }
+      function switchTab(tab) {
+        const tabs = ['requests', 'stock', 'reports', 'services'];
+        
+        tabs.forEach(t => {
+          const content = document.getElementById(`tab-${t}`);
+          const btn = document.getElementById(`tab-btn-${t}`);
+          
+          // Показываем контент нужной вкладки, скрываем остальные
+          if (content) content.style.display = (t === tab) ? 'block' : 'none';
+          
+          // Меняем цвет кнопки (активная — синяя, остальные — серые)
+          if (btn) btn.style.background = (t === tab) ? '#2980b9' : '#7f8c8d';
+        });
+        
+        // Подгружаем данные при переключении
+        if (tab === 'stock') loadStock();
+        if (tab === 'reports') loadReports();
+        if (tab === 'services') loadServices();
+      }
 
     async function loadStock() {
       const pRes = await fetch('/api/admin/parts');
@@ -275,6 +305,43 @@
           <td>${m.completed_requests}</td>
         </tr>
       `).join('') || '<tr><td colspan="4">Нет данных</td></tr>';
+    }
+
+        async function loadServices() {
+      const res = await fetch('/api/admin/services');
+      const data = await res.json();
+      document.getElementById('services-tbody').innerHTML = data.services.map(s => `
+        <tr>
+          <td>${s.name}</td>
+          <td>${s.price}</td>
+          <td>${s.duration}</td>
+          <td>
+            <button onclick="deleteService(${s.service_id})" style="background: #e74c3c; padding: 2px 8px; font-size: 12px;">Удалить</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function createService(e) {
+      e.preventDefault();
+      const form = e.target;
+      await fetch('/api/admin/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.value,
+          price: Number(form.price.value),
+          duration: Number(form.duration.value)
+        })
+      });
+      form.reset();
+      loadServices();
+    }
+
+    async function deleteService(id) {
+      if (!confirm('Удалить эту услугу?')) return;
+      await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
+      loadServices();
     }
 
     // Инициализация

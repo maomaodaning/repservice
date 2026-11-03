@@ -162,3 +162,24 @@ export async function receivePurchaseOrder(orderId: number) {
     client.release();
   }
 }
+
+export async function createService(data: { name: string; price: number; duration: number }) {
+  const res = await pool.query(
+    `INSERT INTO service (name, price, duration) VALUES ($1, $2, $3) RETURNING *`,
+    [data.name, data.price, data.duration]
+  );
+  return res.rows[0];
+}
+
+export async function updateService(id: number, data: { name: string; price: number; duration: number }) {
+  const res = await pool.query(
+    `UPDATE service SET name = $1, price = $2, duration = $3 WHERE service_id = $4 RETURNING *`,
+    [data.name, data.price, data.duration, id]
+  );
+  return res.rows[0];
+}
+
+export async function deleteService(id: number) {
+  await pool.query('DELETE FROM service WHERE service_id = $1', [id]);
+  return { status: 'ok' };
+}
