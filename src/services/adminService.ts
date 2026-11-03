@@ -183,3 +183,25 @@ export async function deleteService(id: number) {
   await pool.query('DELETE FROM service WHERE service_id = $1', [id]);
   return { status: 'ok' };
 }
+
+export async function getAllDiagnostics() {
+  const query = `
+    SELECT 
+      d.diagnostic_id, 
+      d.diagnostic_date, 
+      d.result, 
+      d.recommended_actions, 
+      d.estimated_cost,
+      r.request_id,
+      r.problem_description,
+      c.full_name AS client_name,
+      m.full_name AS master_name
+    FROM diagnostic d
+    JOIN request r ON r.request_id = d.request_id
+    JOIN client c ON c.client_id = r.client_id
+    LEFT JOIN master m ON m.master_id = r.master_id
+    ORDER BY d.diagnostic_date DESC
+  `;
+  const result = await pool.query(query);
+  return result.rows;
+}

@@ -18,6 +18,7 @@
       <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
       <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Отчёты</button>
       <button onclick="switchTab('services')" id="tab-btn-services" style="background: #7f8c8d;">Услуги (Прайс)</button>
+      <button onclick="switchTab('diagnostics')" id="tab-btn-diagnostics" style="background: #7f8c8d;">Диагностики</button>
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
@@ -141,6 +142,25 @@
         <tbody id="services-tbody"></tbody>
       </table>
     </div>
+
+        <!-- ВКЛАДКА: ДИАГНОСТИКИ -->
+    <div id="tab-diagnostics" style="display: none;">
+      <h2>Все диагностики</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Заявка</th>
+            <th>Клиент</th>
+            <th>Мастер</th>
+            <th>Результат</th>
+            <th>Рекомендации</th>
+            <th>Предв. стоимость</th>
+          </tr>
+        </thead>
+        <tbody id="diagnostics-tbody"></tbody>
+      </table>
+    </div>
   </main>
 
   <script>
@@ -216,25 +236,19 @@
       }
     }
 
-      function switchTab(tab) {
-        const tabs = ['requests', 'stock', 'reports', 'services'];
-        
-        tabs.forEach(t => {
-          const content = document.getElementById(`tab-${t}`);
-          const btn = document.getElementById(`tab-btn-${t}`);
-          
-          // Показываем контент нужной вкладки, скрываем остальные
-          if (content) content.style.display = (t === tab) ? 'block' : 'none';
-          
-          // Меняем цвет кнопки (активная — синяя, остальные — серые)
-          if (btn) btn.style.background = (t === tab) ? '#2980b9' : '#7f8c8d';
-        });
-        
-        // Подгружаем данные при переключении
-        if (tab === 'stock') loadStock();
-        if (tab === 'reports') loadReports();
-        if (tab === 'services') loadServices();
-      }
+          function switchTab(tab) {
+      ['requests', 'stock', 'reports', 'services', 'diagnostics'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (el) el.style.display = t === tab ? 'block' : 'none';
+        if (btn) btn.style.background = t === tab ? '#2980b9' : '#7f8c8d';
+      });
+      
+      if (tab === 'stock') loadStock();
+      if (tab === 'reports') loadReports();
+      if (tab === 'services') loadServices();
+      if (tab === 'diagnostics') loadDiagnostics();
+    }
 
         async function loadStock() {
       // загружаем запчасти
@@ -390,6 +404,28 @@
       } else {
         alert('Ошибка добавления');
       }
+    }
+
+        async function loadDiagnostics() {
+      const res = await fetch('/api/admin/diagnostics');
+      const data = await res.json();
+      
+      if (!data.diagnostics || data.diagnostics.length === 0) {
+        document.getElementById('diagnostics-tbody').innerHTML = '<tr><td colspan="7">Диагностик пока нет</td></tr>';
+        return;
+      }
+
+      document.getElementById('diagnostics-tbody').innerHTML = data.diagnostics.map(d => `
+        <tr>
+          <td>${new Date(d.diagnostic_date).toLocaleString('ru-RU')}</td>
+          <td>№${d.request_id} (${d.problem_description.substring(0, 20)}...)</td>
+          <td>${d.client_name}</td>
+          <td>${d.master_name || '<i>не назначен</i>'}</td>
+          <td>${d.result}</td>
+          <td>${d.recommended_actions || '—'}</td>
+          <td>${d.estimated_cost ? d.estimated_cost + ' ₽' : '—'}</td>
+        </tr>
+      `).join('');
     }
 
     // Инициализация

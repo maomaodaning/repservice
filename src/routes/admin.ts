@@ -8,6 +8,7 @@ import {
 import { getRevenueReport, getRequestsReport, getMastersWorkload } from '../services/reportService';
 import { createService, updateService, deleteService } from '../services/adminService';
 import { pool } from '../db/pool';
+import { getAllDiagnostics } from '../services/adminService';
 
 export const adminRouter = Router();
 
@@ -157,5 +158,12 @@ adminRouter.delete('/services/:id', async (req, res, next) => {
   try { 
     const result = await deleteService(Number(req.params.id)); 
     res.json(result); 
+  } catch (err) { next(err); }
+});
+
+adminRouter.get('/diagnostics', async (_req, res, next) => {
+  try {
+    const diagnostics = await getAllDiagnostics();
+    res.json({ diagnostics });
   } catch (err) { next(err); }
 });

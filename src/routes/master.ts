@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireRole } from '../middleware/auth';
 import { getMasterRequests, createDiagnostic, updateStatus, createReport } from '../services/masterService';
 import { AppError } from '../middleware/errorHandler';
+import { getAllDiagnostics } from '../services/adminService';
 
 export const masterRouter = Router();
 
@@ -57,4 +58,11 @@ masterRouter.post('/requests/:id/report', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+masterRouter.get('/diagnostics', async (_req, res, next) => {
+  try {
+    const diagnostics = await getAllDiagnostics();
+    res.json({ diagnostics });
+  } catch (err) { next(err); }
 });
