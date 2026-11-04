@@ -57,3 +57,25 @@ export async function registerClient(data: {
   );
   return { id: res.rows[0].client_id, role: 'client' as UserRole };
 }
+
+export async function createMaster(data: {
+  full_name: string;
+  phone: string;
+  specialization?: string;
+  login: string;
+  password: string;
+}) {
+  // Проверяем, не занят ли логин (во всех трёх таблицах)
+  const existing = await findByLogin(data.login);
+  if (existing) throw new AppError('Логин уже занят', 400);
+
+  const hash = await bcrypt.hash(data.password, 10);
+  
+  const res = await pool.query(
+    `INSERT INTO master (full_name, phone, specialization, login, password_hash)
+     VALUES ($1, $2, $3, $4, $5) RETURNING master_id`,
+    [data.full_name, data.phone, data.specialization || null, data.login, hash]
+  );
+  
+  return { id: res.rows[0].master_id, role: 'master' };
+}

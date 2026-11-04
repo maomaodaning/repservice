@@ -11,6 +11,8 @@ import { pool } from '../db/pool';
 import { getAllDiagnostics } from '../services/adminService';
 import { updateRequestStatus } from '../services/adminService';
 import { generateRequestPdf } from '../services/pdfService';
+import { getStaffStats, updateMaster } from '../services/adminService';
+import { createMaster } from '../services/authService';
 
 export const adminRouter = Router();
 
@@ -187,5 +189,34 @@ adminRouter.get('/requests/:id/pdf', async (req, res, next) => {
     res.send(Buffer.from(pdfBuffer));
   } catch (err) {
     next(err);
+  }
+});
+
+// === ПЕРСОНАЛ ===
+adminRouter.get('/staff', async (_req, res, next) => {
+  try {
+    const staff = await getStaffStats();
+    res.json({ staff });
+  } catch (err) { next(err); }
+});
+
+adminRouter.put('/staff/:id', async (req, res, next) => {
+  try {
+    const result = await updateMaster(Number(req.params.id), req.body);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
+adminRouter.post('/staff', async (req, res, next) => {
+  try {
+    const { full_name, phone, specialization, login, password } = req.body;
+    if (!full_name || !phone || !login || !password) {
+      throw new Error('Заполните все обязательные поля');
+    }
+    
+    const master = await createMaster({ full_name, phone, specialization, login, password });
+    res.status(201).json({ master });
+  } catch (err) { 
+    next(err); 
   }
 });

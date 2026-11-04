@@ -19,7 +19,8 @@
       <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
       <button onclick="switchTab('services')" id="tab-btn-services" style="background: #7f8c8d;">Услуги (Прайс)</button>
       <button onclick="switchTab('diagnostics')" id="tab-btn-diagnostics" style="background: #7f8c8d;">Диагностики</button>
-      <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Отчёты</button>
+      <button onclick="switchTab('staff')" id="tab-btn-staff" style="background: #7f8c8d;">Персонал</button>
+      <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Аналитика</button>
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
@@ -127,7 +128,40 @@
       </table>
     </div>
 
-    <!-- ВКЛАДКА: ОТЧЁТЫ -->
+    <!-- ВКЛАДКА: ПЕРСОНАЛ -->
+    <div id="tab-staff" style="display: none;">
+      <h2>Управление персоналом</h2>
+      
+      <!-- Форма создания -->
+      <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <h3>Добавить нового мастера</h3>
+        <form id="new-master-form" onsubmit="createMaster(event)" style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <input type="text" name="full_name" placeholder="ФИО" required>
+          <input type="text" name="phone" placeholder="Телефон" required>
+          <input type="text" name="specialization" placeholder="Специализация">
+          <input type="text" name="login" placeholder="Логин" required>
+          <input type="password" name="password" placeholder="Пароль" required>
+          <button type="submit" style="background: #27ae60;">Создать</button>
+        </form>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th>Телефон</th>
+            <th>Специализация</th>
+            <th>Рейтинг</th>
+            <th>Всего заявок</th>
+            <th>Завершено</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="staff-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- ВКЛАДКА: АНАЛИТИКА -->
     <div id="tab-reports" style="display: none;">
       <h2>Аналитика</h2>
       <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
@@ -160,7 +194,7 @@
     let suppliersList = [];
 
     function switchTab(tab) {
-      ['requests', 'stock', 'reports', 'services', 'diagnostics'].forEach(t => {
+      ['requests', 'stock', 'reports', 'services', 'diagnostics', 'staff'].forEach(t => {
         const el = document.getElementById(`tab-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (el) el.style.display = t === tab ? 'block' : 'none';
@@ -170,6 +204,7 @@
       if (tab === 'reports') loadReports();
       if (tab === 'services') loadServices();
       if (tab === 'diagnostics') loadDiagnostics();
+      if (tab === 'staff') loadStaff();
     }
 
     async function loadMasters() {
@@ -369,6 +404,81 @@
           <td>${d.estimated_cost ? d.estimated_cost + ' BYN' : '—'}</td>
         </tr>
       `).join('');
+    }
+
+    async function loadStaff() {
+      const res = await fetch('/api/admin/staff');
+      const data = await res.json();
+      
+      document.getElementById('staff-tbody').innerHTML = data.staff.map(m => `
+        <tr>
+          <td>${m.full_name}</td>
+          <td>${m.phone}</td>
+          <td>${m.specialization || '—'}</td>
+          <td>${m.rating || '—'}</td>
+          <td>${m.total_requests}</td>
+          <td>${m.completed_requests}</td>
+          <td>
+            <button onclick="editMaster(${m.master_id}, '${m.full_name}', '${m.phone}', '${m.specialization || ''}')" 
+                    style="padding: 4px 8px; font-size: 12px; background: #3498db;">Редактировать</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function editMaster(id, currentName, currentPhone, currentSpec) {
+      const newName = prompt('ФИО мастера:', currentName);
+      if (newName === null) return;
+      
+      const newPhone = prompt('Телефон:', currentPhone);
+      if (newPhone === null) return;
+      
+      const newSpec = prompt('Специализация:', currentSpec);
+      if (newSpec === null) return;
+
+      const res = await fetch(`/api/admin/staff/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: newName, phone: newPhone, specialization: newSpec })
+      });
+
+      if (res.ok) {
+        loadStaff();
+      } else {
+        alert('Ошибка при сохранении');
+      }
+    }
+
+    async function createMaster(e) {
+      e.preventDefault();
+      const form = e.target;
+      
+      const body = {
+        full_name: form.full_name.value,
+        phone: form.phone.value,
+        specialization: form.specialization.value,
+        login: form.login.value,
+        password: form.password.value,
+      };
+
+      try {
+        const res = await fetch('/api/admin/staff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error?.message || 'Ошибка');
+        
+        alert('Мастер успешно создан!');
+        form.reset();
+        loadStaff(); 
+        
+      } catch (err) {
+        alert(err.message);
+      }
     }
 
     async function loadReports() {

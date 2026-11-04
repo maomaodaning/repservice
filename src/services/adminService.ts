@@ -216,3 +216,43 @@ export async function updateRequestStatus(requestId: number, statusName: string)
   );
   return res.rows[0];
 }
+
+// === ПЕРСОНАЛ ===
+
+export async function getStaffStats() {
+  const query = `
+    SELECT 
+      m.master_id,
+      m.full_name,
+      m.phone,
+      m.specialization,
+      m.rating,
+      m.login,
+      COUNT(r.request_id) AS total_requests,
+      COUNT(CASE WHEN s.name IN ('Готово', 'Оплачено', 'Выдано') THEN 1 END) AS completed_requests
+    FROM master m
+    LEFT JOIN request r ON r.master_id = m.master_id
+    LEFT JOIN status s ON s.status_id = r.status_id
+    GROUP BY m.master_id, m.full_name, m.phone, m.specialization, m.rating, m.login
+    ORDER BY completed_requests DESC
+  `;
+  const result = await pool.query(query);
+  return result.rows;
+}
+
+export async function updateMaster(masterId: number, data: {
+  full_name?: string;
+  phone?: string;
+  specialization?: string;
+}) {
+  const res = await pool.query(
+    `UPDATE master 
+     SET full_name = COALESCE($1, full_name),
+         phone = COALESCE($2, phone),
+         specialization = COALESCE($3, specialization)
+     WHERE master_id = $4 RETURNING master_id`,
+    [data.full_name, data.phone, data.specialization, masterId]
+  );
+  if (res.rows.length === 0) throw new AppError('Мастер не найден', 404);
+  return res.rows[0];
+}
