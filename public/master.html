@@ -53,6 +53,20 @@
   </main>
 
   <script>
+    // Глобальная переменная для хранения списка запчастей
+    let availableParts = [];
+
+    // Загружаем список запчастей для выпадающих списков
+    async function loadPartsList() {
+      try {
+        const res = await fetch('/api/master/parts');
+        const data = await res.json();
+        availableParts = data.parts || [];
+      } catch (err) {
+        console.error('Ошибка загрузки запчастей', err);
+      }
+    }
+
     // === ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
     function switchMasterTab(tab) {
       ['requests', 'diagnostics', 'reports'].forEach(t => {
@@ -89,10 +103,25 @@
             <p><b>Неисправность:</b> ${r.problem_description}</p>
             <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
             
+            <!-- Индикаторы -->
+            <div style="margin-top: 10px; display: flex; gap: 10px; font-size: 13px;">
+              <span style="padding: 4px 8px; border-radius: 4px; font-weight: bold;
+                background: ${r.has_diagnostic ? '#d4edda' : '#f8d7da'}; 
+                color: ${r.has_diagnostic ? '#155724' : '#721c24'};">
+                ${r.has_diagnostic ? '✓' : '✗'} Диагностика
+              </span>
+              
+              <span style="padding: 4px 8px; border-radius: 4px; font-weight: bold;
+                background: ${r.has_report ? '#d4edda' : '#f8d7da'}; 
+                color: ${r.has_report ? '#155724' : '#721c24'};">
+                ${r.has_report ? '✓' : '✗'} Отчёт
+              </span>
+            </div>
+
             <!-- Блок для вывода ошибки -->
             <div id="error-${r.request_id}" style="display: none; background: #fadbd8; color: #922b21; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 14px;"></div>
 
-            <div class="actions">
+            <div class="actions" style="margin-top: 15px;">
               <label>Сменить статус:
                 <select onchange="updateStatus(${r.request_id}, this.value)">
                   <option value="">--</option>
@@ -125,7 +154,7 @@
                   <div id="parts-container-${r.request_id}">
                     <!-- Сюда будут добавляться строки -->
                   </div>
-                  <button type="button" onclick="addPartRow(${r.request_id})" style="font-size: 12px; padding: 4px 8px;">+ Добавить запчасть</button>
+                  <button type="button" onclick="addPartRow(${r.request_id})" style="font-size: 12px; padding: 4px 8px; margin-top: 5px;">+ Добавить запчасть</button>
                 </div>
 
                 <button type="submit" style="margin-top: 10px;">Сохранить отчёт</button>
@@ -187,20 +216,59 @@
       }
     }
 
+    // === ЛОГИКА ЗАПЧАСТЕЙ В ОТЧЁТЕ ===
+    function addPartRow(requestId) {
+      const container = document.getElementById(`parts-container-${requestId}`);
+      const rowId = 'part-row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+      
+      const options = availableParts.map(p => 
+        `<option value="${p.part_id}" data-price="${p.price}">${p.name} (остаток: ${p.quantity} шт, ${p.price} BYN)</option>`
+      ).join('');
+
+      const rowHtml = `
+        <div id="${rowId}" style="display: flex; gap: 5px; margin-bottom: 5px;">
+          <select name="part_id" style="flex-grow: 1;" required>
+            <option value="">-- Выберите запчасть --</option>
+            ${options}
+          </select>
+          <input type="number" name="quantity" min="1" value="1" style="width: 60px;" required>
+          <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background: #e74c3c; padding: 0 8px;">X</button>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', rowHtml);
+    }
+
     async function submitReport(e, id) {
       e.preventDefault();
       const form = e.target;
+      
+      // Собираем выбранные запчасти
+      const parts = [];
+      const container = document.getElementById(`parts-container-${id}`);
+      const rows = container.querySelectorAll('div[id^="part-row-"]');
+      
+      for (const row of rows) {
+        const partId = row.querySelector('select[name="part_id"]').value;
+        const quantity = row.querySelector('input[name="quantity"]').value;
+        if (partId && quantity) {
+          parts.push({ part_id: Number(partId), quantity: Number(quantity) });
+        }
+      }
+
       const res = await fetch(`/api/master/requests/${id}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           work_description: form.work_description.value,
           labor_cost: Number(form.labor_cost.value),
+          parts: parts 
         }),
       });
+      
       if (res.ok) {
         form.reset();
-        alert('Отчёт сохранён');
+        container.innerHTML = ''; 
+        alert('Отчёт сохранён, запчасти списаны со склада');
         loadRequests();
       } else {
         const err = await res.json();
@@ -252,86 +320,8 @@
       `).join('');
     }
 
-        // Глобальная переменная для хранения списка запчастей
-    let availableParts = [];
-
-    // Загружаем список запчастей при старте
-    async function loadPartsList() {
-      try {
-        const res = await fetch('/api/master/parts');
-        const data = await res.json();
-        availableParts = data.parts || [];
-      } catch (err) {
-        console.error('Ошибка загрузки запчастей', err);
-      }
-    }
-
-    // Функция добавления строки для запчасти
-    function addPartRow(requestId) {
-      const container = document.getElementById(`parts-container-${requestId}`);
-      const rowId = 'part-row-' + Date.now() + Math.random().toString(36).substr(2, 5);
-      
-      const options = availableParts.map(p => 
-        `<option value="${p.part_id}" data-price="${p.price}">${p.name} (остаток: ${p.quantity} шт, ${p.price} BYN)</option>`
-      ).join('');
-
-      const rowHtml = `
-        <div id="${rowId}" style="display: flex; gap: 5px; margin-bottom: 5px;">
-          <select name="part_id" style="flex-grow: 1;" required>
-            <option value="">-- Выберите запчасть --</option>
-            ${options}
-          </select>
-          <input type="number" name="quantity" min="1" value="1" style="width: 60px;" required>
-          <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background: #e74c3c; padding: 0 8px;">X</button>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', rowHtml);
-    }
-
-    // Обновляем submitReport
-    async function submitReport(e, id) {
-      e.preventDefault();
-      const form = e.target;
-      
-      // Собираем выбранные запчасти
-      const parts = [];
-      const container = document.getElementById(`parts-container-${id}`);
-      const rows = container.querySelectorAll('div[id^="part-row-"]');
-      
-      for (const row of rows) {
-        const partId = row.querySelector('select[name="part_id"]').value;
-        const quantity = row.querySelector('input[name="quantity"]').value;
-        if (partId && quantity) {
-          parts.push({ part_id: Number(partId), quantity: Number(quantity) });
-        }
-      }
-
-      const res = await fetch(`/api/master/requests/${id}/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          work_description: form.work_description.value,
-          labor_cost: Number(form.labor_cost.value),
-          parts: parts // <-- передаем запчасти
-        }),
-      });
-      
-      if (res.ok) {
-        form.reset();
-        container.innerHTML = ''; // очищаем контейнер
-        alert('Отчёт сохранён, запчасти списаны со склада');
-        loadRequests();
-      } else {
-        const err = await res.json();
-        alert(err.error?.message || 'Ошибка при сохранении отчёта');
-      }
-    }
-
-    // В самом низу, перед loadRequests(), добавь вызов загрузки запчастей:
-    loadPartsList().then(() => loadRequests());
-
     // Инициализация при загрузке
-    loadRequests();
+    loadPartsList().then(() => loadRequests());
   </script>
   <script src="/js/header.js"></script>
 </body>

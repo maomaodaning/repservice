@@ -59,12 +59,21 @@ export async function createRequest(clientId: number, data: {
 export async function getClientRequests(clientId: number, statusName?: string) {
   let query = `
     SELECT r.request_id, r.created_at, r.completed_at, r.problem_description,
-           r.total_cost, r.rating,  -- <-- ДОБАВИЛИ ЭТО ПОЛЕ
+           r.total_cost, r.rating,
            s.name AS status_name,
-           d.type AS device_type, d.brand AS device_brand, d.model AS device_model
+           d.type AS device_type, d.brand AS device_brand, d.model AS device_model,
+           
+           -- Данные диагностики
+           diag.diagnostic_id, diag.diagnostic_date, diag.result, diag.recommended_actions, diag.estimated_cost,
+           
+           -- Данные отчёта
+           wr.report_id, wr.report_date, wr.work_description, wr.labor_cost
+           
     FROM request r
     JOIN status s ON s.status_id = r.status_id
     JOIN device d ON d.device_id = r.device_id
+    LEFT JOIN diagnostic diag ON diag.request_id = r.request_id
+    LEFT JOIN work_report wr ON wr.request_id = r.request_id
     WHERE r.client_id = $1
   `;
   const params: any[] = [clientId];
@@ -76,7 +85,25 @@ export async function getClientRequests(clientId: number, statusName?: string) {
 
   query += ` ORDER BY r.created_at DESC`;
   const result = await pool.query(query, params);
-  return result.rows;
+
+  // Для каждой заявки подтягиваем запчасти (если есть отчёт)
+  const requests = result.rows;
+  for (let req of requests) {
+    if (req.report_id) {
+      const partsRes = await pool.query(
+        `SELECT rp.quantity, rp.price_at_moment, p.name AS part_name, p.article
+         FROM request_part rp
+         JOIN part p ON p.part_id = rp.part_id
+         WHERE rp.request_id = $1`,
+        [req.request_id]
+      );
+      req.used_parts = partsRes.rows;
+    } else {
+      req.used_parts = [];
+    }
+  }
+
+  return requests;
 }
 
 export async function getRequestDetails(requestId: number, clientId: number) {
@@ -98,16 +125,26 @@ export async function getRequestDetails(requestId: number, clientId: number) {
 
   const request = reqRes.rows[0];
 
-  // Получаем диагностику, отчёт и оплату (если есть)
+  // Получаем диагностику, отчёт и оплату
   const diagRes = await pool.query('SELECT * FROM diagnostic WHERE request_id = $1', [requestId]);
   const reportRes = await pool.query('SELECT * FROM work_report WHERE request_id = $1', [requestId]);
   const payRes = await pool.query('SELECT * FROM payment WHERE request_id = $1', [requestId]);
+
+  // НОВОЕ: Получаем список использованных запчастей
+  const partsRes = await pool.query(
+    `SELECT rp.quantity, rp.price_at_moment, p.name AS part_name, p.article
+     FROM request_part rp
+     JOIN part p ON p.part_id = rp.part_id
+     WHERE rp.request_id = $1`,
+    [requestId]
+  );
 
   return {
     ...request,
     diagnostic: diagRes.rows[0] || null,
     work_report: reportRes.rows[0] || null,
     payment: payRes.rows[0] || null,
+    used_parts: partsRes.rows, // <-- ДОБАВИЛИ ЭТО
   };
 }
 

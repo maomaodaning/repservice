@@ -14,7 +14,7 @@
   </main>
 
   <script>
-    async function loadRequests() {
+        async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
         const res = await fetch('/api/requests');
@@ -27,7 +27,7 @@
         const data = await res.json();
         
         if (data.error) {
-          container.innerHTML = `<p style="color:red">Ошибка: ${data.error.message}</p>`;
+          container.innerHTML = '<p style="color:red">Ошибка: ' + data.error.message + '</p>';
           return;
         }
 
@@ -36,75 +36,169 @@
           return;
         }
 
-        container.innerHTML = data.requests.map(r => {
-          // Определяем статус оплаты
+        let html = '';
+
+        for (const r of data.requests) {
           const isPaid = r.status_name === 'Оплачено' || r.status_name === 'Выдано';
+          const isReady = r.status_name === 'Готово';
           
-          return `
-          <div class="request-card">
-            <h3>Заявка №${r.request_id}</h3>
-            <p><b>Устройство:</b> ${r.device_type} ${r.device_brand || ''} ${r.device_model || ''}</p>
-            <p><b>Неисправность:</b> ${r.problem_description}</p>
-            
-            <p>
-              <b>Статус:</b> <span class="status-badge">${r.status_name}</span>
-              <span style="margin-left: 10px; font-size: 12px; color: ${isPaid ? 'green' : 'red'};">
-                [${isPaid ? '✓ Оплачено' : '✗ Не оплачено'}]
-              </span>
-            </p>
+          html += '<div class="request-card">';
+          html += '<h3>Заявка №' + r.request_id + '</h3>';
+          html += '<p><b>Устройство:</b> ' + r.device_type + ' ' + (r.device_brand || '') + ' ' + (r.device_model || '') + '</p>';
+          html += '<p><b>Неисправность:</b> ' + r.problem_description + '</p>';
+          
+          html += '<p><b>Статус:</b> <span class="status-badge">' + r.status_name + '</span> ';
+          if (isPaid) {
+             html += '<span style="color: green; margin-left: 10px;">[✓ Оплачено]</span></p>';
+          } else {
+             html += '<span style="color: red; margin-left: 10px;">[✗ Не оплачено]</span></p>';
+          }
 
-            <!-- Вывод стоимости или предупреждения -->
-            ${r.total_cost 
-              ? `<p><b>Стоимость:</b> ${r.total_cost} ₽</p>` 
-              : (r.status_name === 'Готово' ? `<p style="color: red; font-weight: bold;">Стоимость не указана. Обратитесь в сервисный центр.</p>` : '')
+          if (r.total_cost) {
+            html += '<p><b>Стоимость:</b> ' + r.total_cost + ' BYN</p>';
+          } else if (isReady) {
+            html += '<p style="color: red; font-weight: bold;">Стоимость не указана. Обратитесь в сервисный центр.</p>';
+          }
+          
+          // Блок диагностики (выводим сразу)
+          if (r.diagnostic_id) {
+            html += '<details style="margin-top: 10px; background: #f0f8ff; padding: 10px; border-radius: 4px;">';
+            html += '<summary style="cursor: pointer; font-weight: bold; color: #2980b9;">Посмотреть диагностику</summary>';
+            html += '<div style="margin-top: 10px; font-size: 14px;">';
+            html += '<p><b>Дата:</b> ' + new Date(r.diagnostic_date).toLocaleString('ru-RU') + '</p>';
+            html += '<p><b>Результат:</b> ' + (r.result || '—') + '</p>';
+            html += '<p><b>Рекомендации:</b> ' + (r.recommended_actions || '—') + '</p>';
+            html += '<p><b>Предв. стоимость:</b> ' + (r.estimated_cost ? r.estimated_cost + ' BYN' : '—') + '</p>';
+            html += '</div></details>';
+          }
+
+          // Блок отчёта (выводим сразу)
+          if (r.report_id) {
+            html += '<details style="margin-top: 10px; background: #f0fff0; padding: 10px; border-radius: 4px;">';
+            html += '<summary style="cursor: pointer; font-weight: bold; color: #27ae60;">Посмотреть отчёт о работах</summary>';
+            html += '<div style="margin-top: 10px; font-size: 14px;">';
+            html += '<p><b>Дата:</b> ' + new Date(r.report_date).toLocaleString('ru-RU') + '</p>';
+            html += '<p><b>Что сделано:</b> ' + r.work_description + '</p>';
+            html += '<p><b>Стоимость работ:</b> ' + r.labor_cost + ' BYN</p>';
+            
+            // Вывод запчастей
+            if (r.used_parts && r.used_parts.length > 0) {
+              html += '<p style="margin-top: 10px;"><b>Использованные запчасти:</b></p>';
+              html += '<ul style="margin-top: 5px; padding-left: 20px;">';
+              r.used_parts.forEach(p => {
+                html += '<li>' + p.part_name + (p.article ? ' (арт. ' + p.article + ')' : '') + 
+                        ' — ' + p.quantity + ' шт. × ' + p.price_at_moment + ' BYN</li>';
+              });
+              html += '</ul>';
             }
-            
-            <!-- Форма оплаты -->
-            ${r.status_name === 'Готово' && r.total_cost ? `
-              <form onsubmit="payRequest(event, ${r.request_id})" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">
-                <p><b>Оплата ремонта</b></p>
-                <input type="number" name="amount" placeholder="Сумма" value="${r.total_cost || ''}" required style="width: 100px;">
-                <select name="method" required>
-                  <option value="card">Карта</option>
-                  <option value="cash">Наличные</option>
-                </select>
-                <button type="submit" style="background: #27ae60;">Оплатить</button>
-              </form>
-            ` : ''}
+            html += '</div></details>';
+          }
 
-            <!-- Форма оценки (только если оплачено и еще не оценено) -->
-            ${isPaid && !r.rating ? `
-              <form onsubmit="rateMaster(event, ${r.request_id})" style="margin-top: 10px; background: #fcf3cf; padding: 10px; border-radius: 4px;">
-                <p><b>Оцените работу мастера:</b></p>
-                <select name="rating" required>
-                  <option value="5">5 (Отлично)</option>
-                  <option value="4">4 (Хорошо)</option>
-                  <option value="3">3 (Нормально)</option>
-                  <option value="2">2 (Плохо)</option>
-                  <option value="1">1 (Ужасно)</option>
-                </select>
-                <button type="submit">Отправить оценку</button>
-              </form>
-            ` : ''}
+          // Форма оплаты
+          if (isReady && r.total_cost) {
+            html += '<form onsubmit="payRequest(event, ' + r.request_id + ')" style="margin-top: 10px; background: #e8f4f8; padding: 10px; border-radius: 4px;">';
+            html += '<p><b>Оплата ремонта</b></p>';
+            html += '<input type="number" name="amount" value="' + r.total_cost + '" required style="width: 100px;"> ';
+            html += '<select name="method" required><option value="card">Карта</option><option value="cash">Наличные</option></select> ';
+            html += '<button type="submit" style="background: #27ae60;">Оплатить</button>';
+            html += '</form>';
+          }
 
-            <!-- Сообщение, если оценка уже поставлена -->
-            ${r.rating ? `
-              <p style="color: green; font-weight: bold; margin-top: 10px;">
-                ✓ Вы оценили работу на ${r.rating} из 5.
-              </p>
-            ` : ''}
-          </div>
-        `}).join('');
+          // Форма оценки
+          if (isPaid && !r.rating) {
+            html += '<form onsubmit="rateMaster(event, ' + r.request_id + ')" style="margin-top: 10px; background: #fcf3cf; padding: 10px; border-radius: 4px;">';
+            html += '<p><b>Оцените работу мастера:</b></p>';
+            html += '<select name="rating" required><option value="5">5 (Отлично)</option><option value="4">4 (Хорошо)</option><option value="3">3 (Нормально)</option><option value="2">2 (Плохо)</option><option value="1">1 (Ужасно)</option></select> ';
+            html += '<button type="submit">Отправить оценку</button>';
+            html += '</form>';
+          }
+
+          if (r.rating) {
+            html += '<p style="color: green; font-weight: bold; margin-top: 10px;">✓ Вы оценили работу на ' + r.rating + ' из 5.</p>';
+          }
+
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+
       } catch (err) {
         console.error(err);
         container.innerHTML = '<p style="color:red">Ошибка сети. Проверьте консоль (F12).</p>';
       }
     }
 
+    // Старые функции loadDiagnosticDetails и loadReportDetails можно удалить, они больше не нужны.
+    // Функции payRequest и rateMaster оставляем как есть.
+
+    async function loadDiagnosticDetails(requestId) {
+      const container = document.getElementById('diagnostic-content-' + requestId);
+      // Если уже загружено (не "Загрузка..."), не грузим повторно
+      if (container.innerHTML !== 'Загрузка...') return; 
+
+      try {
+        const res = await fetch('/api/requests/' + requestId);
+        const data = await res.json();
+        const d = data.request && data.request.diagnostic;
+        
+        if (d) {
+          container.innerHTML = 
+            '<p><b>Дата:</b> ' + new Date(d.diagnostic_date).toLocaleString('ru-RU') + '</p>' +
+            '<p><b>Результат:</b> ' + d.result + '</p>' +
+            '<p><b>Рекомендации:</b> ' + (d.recommended_actions || '—') + '</p>' +
+            '<p><b>Предв. стоимость:</b> ' + (d.estimated_cost ? d.estimated_cost + ' BYN' : '—') + '</p>';
+        } else {
+          container.innerHTML = 'Диагностика не найдена.';
+        }
+      } catch (err) {
+        container.innerHTML = 'Ошибка загрузки.';
+      }
+    }
+
+        async function loadReportDetails(detailsElement) {
+      if (!detailsElement.open) return;
+
+      const container = detailsElement.querySelector('.rep-content');
+      if (!container || container.innerHTML !== 'Загрузка...') return;
+
+      const requestId = container.getAttribute('data-id');
+
+      try {
+        const res = await fetch('/api/requests/' + requestId);
+        const data = await res.json();
+        const r = data.request && data.request.work_report;
+        const usedParts = data.request && data.request.used_parts;
+
+        if (r) {
+          let html = 
+            '<p><b>Дата:</b> ' + new Date(r.report_date).toLocaleString('ru-RU') + '</p>' +
+            '<p><b>Что сделано:</b> ' + r.work_description + '</p>' +
+            '<p><b>Стоимость работ:</b> ' + r.labor_cost + ' BYN</p>';
+
+          // Если есть использованные запчасти, выводим их списком
+          if (usedParts && usedParts.length > 0) {
+            html += '<p style="margin-top: 10px;"><b>Использованные запчасти:</b></p>';
+            html += '<ul style="margin-top: 5px; padding-left: 20px; font-size: 14px;">';
+            usedParts.forEach(p => {
+              html += '<li>' + p.part_name + (p.article ? ' (арт. ' + p.article + ')' : '') + 
+                      ' — ' + p.quantity + ' шт. × ' + p.price_at_moment + ' BYN</li>';
+            });
+            html += '</ul>';
+          }
+
+          container.innerHTML = html;
+        } else {
+          container.innerHTML = 'Отчёт не найден.';
+        }
+      } catch (err) {
+        container.innerHTML = 'Ошибка загрузки.';
+      }
+    }
+
     async function payRequest(e, id) {
       e.preventDefault();
       const form = e.target;
-      const res = await fetch(`/api/requests/${id}/payment`, {
+      const res = await fetch('/api/requests/' + id + '/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,7 +216,7 @@
     async function rateMaster(e, id) {
       e.preventDefault();
       const form = e.target;
-      const res = await fetch(`/api/requests/${id}/rating`, {
+      const res = await fetch('/api/requests/' + id + '/rating', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: Number(form.rating.value) }),
@@ -136,7 +230,6 @@
       loadRequests();
     }
 
-    // Запускаем загрузку
     loadRequests();
   </script>
   <script src="/js/header.js"></script>

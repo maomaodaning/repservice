@@ -5,12 +5,15 @@ export async function getMasterRequests(masterId: number, statusName?: string) {
   let query = `
     SELECT r.request_id, r.created_at, r.problem_description,
            s.name AS status_name,
-           d.type AS device_type, d.brand AS device_brand, d.model AS device_model
+           d.type AS device_type, d.brand AS device_brand, d.model AS device_model,
+           (SELECT COUNT(*) FROM diagnostic WHERE request_id = r.request_id) > 0 AS has_diagnostic,
+           (SELECT COUNT(*) FROM work_report WHERE request_id = r.request_id) > 0 AS has_report
     FROM request r
     JOIN status s ON s.status_id = r.status_id
     JOIN device d ON d.device_id = r.device_id
-    WHERE r.master_id = $1 AND s.name != 'Выдано'  -- ДОБАВИЛИ ЭТО УСЛОВИЕ
+    WHERE r.master_id = $1 AND s.name != 'Выдано'
   `;
+  
   const params: any[] = [masterId];
 
   if (statusName) {
