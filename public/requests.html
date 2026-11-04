@@ -14,7 +14,7 @@
   </main>
 
   <script>
-        async function loadRequests() {
+    async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
         const res = await fetch('/api/requests');
@@ -60,7 +60,12 @@
             html += '<p style="color: red; font-weight: bold;">Стоимость не указана. Обратитесь в сервисный центр.</p>';
           }
           
-          // Блок диагностики (выводим сразу)
+          // Кнопка скачивания PDF
+          html += '<div style="margin-top: 10px;">';
+          html += '<a href="/api/requests/' + r.request_id + '/pdf" target="_blank" style="display: inline-block; padding: 6px 12px; background: #34495e; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">📄 Скачать отчёт (PDF)</a>';
+          html += '</div>';
+
+          // Блок диагностики
           if (r.diagnostic_id) {
             html += '<details style="margin-top: 10px; background: #f0f8ff; padding: 10px; border-radius: 4px;">';
             html += '<summary style="cursor: pointer; font-weight: bold; color: #2980b9;">Посмотреть диагностику</summary>';
@@ -72,7 +77,7 @@
             html += '</div></details>';
           }
 
-          // Блок отчёта (выводим сразу)
+          // Блок отчёта
           if (r.report_id) {
             html += '<details style="margin-top: 10px; background: #f0fff0; padding: 10px; border-radius: 4px;">';
             html += '<summary style="cursor: pointer; font-weight: bold; color: #27ae60;">Посмотреть отчёт о работах</summary>';
@@ -81,7 +86,6 @@
             html += '<p><b>Что сделано:</b> ' + r.work_description + '</p>';
             html += '<p><b>Стоимость работ:</b> ' + r.labor_cost + ' BYN</p>';
             
-            // Вывод запчастей
             if (r.used_parts && r.used_parts.length > 0) {
               html += '<p style="margin-top: 10px;"><b>Использованные запчасти:</b></p>';
               html += '<ul style="margin-top: 5px; padding-left: 20px;">';
@@ -125,73 +129,6 @@
       } catch (err) {
         console.error(err);
         container.innerHTML = '<p style="color:red">Ошибка сети. Проверьте консоль (F12).</p>';
-      }
-    }
-
-    // Старые функции loadDiagnosticDetails и loadReportDetails можно удалить, они больше не нужны.
-    // Функции payRequest и rateMaster оставляем как есть.
-
-    async function loadDiagnosticDetails(requestId) {
-      const container = document.getElementById('diagnostic-content-' + requestId);
-      // Если уже загружено (не "Загрузка..."), не грузим повторно
-      if (container.innerHTML !== 'Загрузка...') return; 
-
-      try {
-        const res = await fetch('/api/requests/' + requestId);
-        const data = await res.json();
-        const d = data.request && data.request.diagnostic;
-        
-        if (d) {
-          container.innerHTML = 
-            '<p><b>Дата:</b> ' + new Date(d.diagnostic_date).toLocaleString('ru-RU') + '</p>' +
-            '<p><b>Результат:</b> ' + d.result + '</p>' +
-            '<p><b>Рекомендации:</b> ' + (d.recommended_actions || '—') + '</p>' +
-            '<p><b>Предв. стоимость:</b> ' + (d.estimated_cost ? d.estimated_cost + ' BYN' : '—') + '</p>';
-        } else {
-          container.innerHTML = 'Диагностика не найдена.';
-        }
-      } catch (err) {
-        container.innerHTML = 'Ошибка загрузки.';
-      }
-    }
-
-        async function loadReportDetails(detailsElement) {
-      if (!detailsElement.open) return;
-
-      const container = detailsElement.querySelector('.rep-content');
-      if (!container || container.innerHTML !== 'Загрузка...') return;
-
-      const requestId = container.getAttribute('data-id');
-
-      try {
-        const res = await fetch('/api/requests/' + requestId);
-        const data = await res.json();
-        const r = data.request && data.request.work_report;
-        const usedParts = data.request && data.request.used_parts;
-
-        if (r) {
-          let html = 
-            '<p><b>Дата:</b> ' + new Date(r.report_date).toLocaleString('ru-RU') + '</p>' +
-            '<p><b>Что сделано:</b> ' + r.work_description + '</p>' +
-            '<p><b>Стоимость работ:</b> ' + r.labor_cost + ' BYN</p>';
-
-          // Если есть использованные запчасти, выводим их списком
-          if (usedParts && usedParts.length > 0) {
-            html += '<p style="margin-top: 10px;"><b>Использованные запчасти:</b></p>';
-            html += '<ul style="margin-top: 5px; padding-left: 20px; font-size: 14px;">';
-            usedParts.forEach(p => {
-              html += '<li>' + p.part_name + (p.article ? ' (арт. ' + p.article + ')' : '') + 
-                      ' — ' + p.quantity + ' шт. × ' + p.price_at_moment + ' BYN</li>';
-            });
-            html += '</ul>';
-          }
-
-          container.innerHTML = html;
-        } else {
-          container.innerHTML = 'Отчёт не найден.';
-        }
-      } catch (err) {
-        container.innerHTML = 'Ошибка загрузки.';
       }
     }
 

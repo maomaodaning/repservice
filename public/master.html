@@ -9,20 +9,17 @@
   <header></header>
   
   <main>
-    <!-- Навигация по вкладкам -->
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
       <button onclick="switchMasterTab('requests')" id="m-tab-btn-requests" style="background: #2980b9;">Мои заявки</button>
       <button onclick="switchMasterTab('diagnostics')" id="m-tab-btn-diagnostics" style="background: #7f8c8d;">Все диагностики</button>
       <button onclick="switchMasterTab('reports')" id="m-tab-btn-reports" style="background: #7f8c8d;">Мои отчёты</button>
     </div>
 
-    <!-- Вкладка 1: Заявки -->
     <div id="m-tab-requests">
       <h2>Заявки в работе</h2>
       <div id="requests-list">Загрузка...</div>
     </div>
 
-    <!-- Вкладка 2: Диагностики -->
     <div id="m-tab-diagnostics" style="display: none;">
       <h2>Все диагностики в системе</h2>
       <table class="admin-table" style="width: 100%;">
@@ -33,7 +30,6 @@
       </table>
     </div>
 
-    <!-- Вкладка 3: Отчёты -->
     <div id="m-tab-reports" style="display: none;">
       <h2>История моих отчётов</h2>
       <table class="admin-table" style="width: 100%;">
@@ -45,6 +41,7 @@
             <th>Что сделано</th>
             <th>Стоимость работ</th>
             <th>Статус заявки</th>
+            <th>Действие</th>
           </tr>
         </thead>
         <tbody id="m-reports-tbody"></tbody>
@@ -53,10 +50,8 @@
   </main>
 
   <script>
-    // Глобальная переменная для хранения списка запчастей
     let availableParts = [];
 
-    // Загружаем список запчастей для выпадающих списков
     async function loadPartsList() {
       try {
         const res = await fetch('/api/master/parts');
@@ -67,7 +62,6 @@
       }
     }
 
-    // === ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
     function switchMasterTab(tab) {
       ['requests', 'diagnostics', 'reports'].forEach(t => {
         const el = document.getElementById(`m-tab-${t}`);
@@ -80,7 +74,6 @@
       if (tab === 'reports') loadMasterReports();
     }
 
-    // === ВКЛАДКА 1: ЗАЯВКИ ===
     async function loadRequests() {
       const container = document.getElementById('requests-list');
       try {
@@ -103,7 +96,6 @@
             <p><b>Неисправность:</b> ${r.problem_description}</p>
             <p><b>Статус:</b> <span class="status-badge">${r.status_name}</span></p>
             
-            <!-- Индикаторы -->
             <div style="margin-top: 10px; display: flex; gap: 10px; font-size: 13px;">
               <span style="padding: 4px 8px; border-radius: 4px; font-weight: bold;
                 background: ${r.has_diagnostic ? '#d4edda' : '#f8d7da'}; 
@@ -118,7 +110,9 @@
               </span>
             </div>
 
-            <!-- Блок для вывода ошибки -->
+            <!-- Кнопка скачивания PDF -->
+            <a href="/api/master/requests/${r.request_id}/pdf" target="_blank" style="display: inline-block; margin-top: 10px; padding: 6px 12px; background: #34495e; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">📄 Скачать отчёт (PDF)</a>
+
             <div id="error-${r.request_id}" style="display: none; background: #fadbd8; color: #922b21; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 14px;"></div>
 
             <div class="actions" style="margin-top: 15px;">
@@ -148,12 +142,9 @@
                 <textarea name="work_description" placeholder="Что сделано" required></textarea><br>
                 <input type="number" name="labor_cost" placeholder="Стоимость работ" required><br>
                 
-                <!-- Блок для запчастей -->
                 <div style="margin-top: 10px; background: #eee; padding: 10px; border-radius: 4px;">
                   <p><b>Использованные запчасти:</b></p>
-                  <div id="parts-container-${r.request_id}">
-                    <!-- Сюда будут добавляться строки -->
-                  </div>
+                  <div id="parts-container-${r.request_id}"></div>
                   <button type="button" onclick="addPartRow(${r.request_id})" style="font-size: 12px; padding: 4px 8px; margin-top: 5px;">+ Добавить запчасть</button>
                 </div>
 
@@ -169,26 +160,15 @@
 
     async function updateStatus(id, status) {
       if (!status) return;
-      
       const res = await fetch(`/api/master/requests/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         const errorDiv = document.getElementById(`error-${id}`);
-        if (errorDiv) {
-          errorDiv.textContent = data.error?.message || 'Ошибка при смене статуса';
-          errorDiv.style.display = 'block';
-        }
+        if (errorDiv) { errorDiv.textContent = data.error?.message || 'Ошибка'; errorDiv.style.display = 'block'; }
         const card = document.querySelector(`#request-card-${id}`);
-        if (card) {
-          const select = card.querySelector('select');
-          if (select) select.value = ''; 
-        }
+        if (card) { const select = card.querySelector('select'); if (select) select.value = ''; }
         return;
       }
       loadRequests();
@@ -198,94 +178,52 @@
       e.preventDefault();
       const form = e.target;
       const res = await fetch(`/api/master/requests/${id}/diagnostic`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          result: form.result.value,
-          recommended_actions: form.recommended_actions.value,
-          estimated_cost: form.estimated_cost.value ? Number(form.estimated_cost.value) : undefined,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: form.result.value, recommended_actions: form.recommended_actions.value, estimated_cost: form.estimated_cost.value ? Number(form.estimated_cost.value) : undefined }),
       });
-      if (res.ok) {
-        form.reset();
-        alert('Диагностика сохранена');
-        loadRequests();
-      } else {
-        const err = await res.json();
-        alert(err.error?.message || 'Ошибка диагностики');
-      }
+      if (res.ok) { form.reset(); alert('Диагностика сохранена'); loadRequests(); }
+      else { const err = await res.json(); alert(err.error?.message || 'Ошибка'); }
     }
 
-    // === ЛОГИКА ЗАПЧАСТЕЙ В ОТЧЁТЕ ===
     function addPartRow(requestId) {
       const container = document.getElementById(`parts-container-${requestId}`);
       const rowId = 'part-row-' + Date.now() + Math.random().toString(36).substr(2, 5);
-      
-      const options = availableParts.map(p => 
-        `<option value="${p.part_id}" data-price="${p.price}">${p.name} (остаток: ${p.quantity} шт, ${p.price} BYN)</option>`
-      ).join('');
-
+      const options = availableParts.map(p => `<option value="${p.part_id}">${p.name} (остаток: ${p.quantity} шт, ${p.price} BYN)</option>`).join('');
       const rowHtml = `
         <div id="${rowId}" style="display: flex; gap: 5px; margin-bottom: 5px;">
-          <select name="part_id" style="flex-grow: 1;" required>
-            <option value="">-- Выберите запчасть --</option>
-            ${options}
-          </select>
+          <select name="part_id" style="flex-grow: 1;" required><option value="">-- Выберите --</option>${options}</select>
           <input type="number" name="quantity" min="1" value="1" style="width: 60px;" required>
           <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background: #e74c3c; padding: 0 8px;">X</button>
-        </div>
-      `;
+        </div>`;
       container.insertAdjacentHTML('beforeend', rowHtml);
     }
 
     async function submitReport(e, id) {
       e.preventDefault();
       const form = e.target;
-      
-      // Собираем выбранные запчасти
       const parts = [];
       const container = document.getElementById(`parts-container-${id}`);
       const rows = container.querySelectorAll('div[id^="part-row-"]');
-      
       for (const row of rows) {
         const partId = row.querySelector('select[name="part_id"]').value;
         const quantity = row.querySelector('input[name="quantity"]').value;
-        if (partId && quantity) {
-          parts.push({ part_id: Number(partId), quantity: Number(quantity) });
-        }
+        if (partId && quantity) parts.push({ part_id: Number(partId), quantity: Number(quantity) });
       }
 
       const res = await fetch(`/api/master/requests/${id}/report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          work_description: form.work_description.value,
-          labor_cost: Number(form.labor_cost.value),
-          parts: parts 
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ work_description: form.work_description.value, labor_cost: Number(form.labor_cost.value), parts }),
       });
-      
-      if (res.ok) {
-        form.reset();
-        container.innerHTML = ''; 
-        alert('Отчёт сохранён, запчасти списаны со склада');
-        loadRequests();
-      } else {
-        const err = await res.json();
-        alert(err.error?.message || 'Ошибка при сохранении отчёта');
-      }
+      if (res.ok) { form.reset(); container.innerHTML = ''; alert('Отчёт сохранён'); loadRequests(); }
+      else { const err = await res.json(); alert(err.error?.message || 'Ошибка'); }
     }
 
-    // === ВКЛАДКА 2: ДИАГНОСТИКИ ===
     async function loadMasterDiagnostics() {
       const res = await fetch('/api/master/diagnostics');
       const data = await res.json();
-      
       if (!data.diagnostics || data.diagnostics.length === 0) {
-        document.getElementById('m-diagnostics-tbody').innerHTML = '<tr><td colspan="6">Диагностик пока нет</td></tr>';
-        return;
+        document.getElementById('m-diagnostics-tbody').innerHTML = '<tr><td colspan="6">Диагностик пока нет</td></tr>'; return;
       }
-
       document.getElementById('m-diagnostics-tbody').innerHTML = data.diagnostics.map(d => `
         <tr>
           <td>${new Date(d.diagnostic_date).toLocaleString('ru-RU')}</td>
@@ -294,20 +232,15 @@
           <td>${d.master_name || '<i>не назначен</i>'}</td>
           <td>${d.result}</td>
           <td>${d.estimated_cost ? d.estimated_cost + ' BYN' : '—'}</td>
-        </tr>
-      `).join('');
+        </tr>`).join('');
     }
 
-    // === ВКЛАДКА 3: ОТЧЁТЫ ===
     async function loadMasterReports() {
       const res = await fetch('/api/master/reports');
       const data = await res.json();
-      
       if (!data.reports || data.reports.length === 0) {
-        document.getElementById('m-reports-tbody').innerHTML = '<tr><td colspan="6">Отчётов пока нет</td></tr>';
-        return;
+        document.getElementById('m-reports-tbody').innerHTML = '<tr><td colspan="7">Отчётов пока нет</td></tr>'; return;
       }
-
       document.getElementById('m-reports-tbody').innerHTML = data.reports.map(r => `
         <tr>
           <td>${new Date(r.report_date).toLocaleString('ru-RU')}</td>
@@ -316,11 +249,10 @@
           <td>${r.work_description}</td>
           <td style="font-weight: bold;">${r.labor_cost} BYN</td>
           <td><span class="status-badge">${r.status_name}</span></td>
-        </tr>
-      `).join('');
+          <td><a href="/api/master/requests/${r.request_id}/pdf" target="_blank" style="font-size: 12px; color: #2980b9;">📄 PDF</a></td>
+        </tr>`).join('');
     }
 
-    // Инициализация при загрузке
     loadPartsList().then(() => loadRequests());
   </script>
   <script src="/js/header.js"></script>

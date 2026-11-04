@@ -4,6 +4,7 @@ import { getMasterRequests, createDiagnostic, updateStatus, createReport, getMas
 import { AppError } from '../middleware/errorHandler';
 import { getAllDiagnostics } from '../services/adminService';
 import { pool } from '../db/pool';
+import { generateRequestPdf } from '../services/pdfService';
 
 export const masterRouter = Router();
 
@@ -83,4 +84,17 @@ masterRouter.get('/parts', async (_req, res, next) => {
     const result = await pool.query('SELECT part_id, name, quantity, price FROM part ORDER BY name');
     res.json({ parts: result.rows });
   } catch (err) { next(err); }
+});
+
+masterRouter.get('/requests/:id/pdf', async (req, res, next) => {
+  try {
+    const pdfBuffer = await generateRequestPdf(Number(req.params.id));
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${req.params.id}.pdf"`,
+    });
+    res.send(Buffer.from(pdfBuffer));
+  } catch (err) {
+    next(err);
+  }
 });

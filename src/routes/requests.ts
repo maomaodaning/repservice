@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireRole } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createRequest, getClientRequests, getRequestDetails, cancelRequest, payRequest, rateMaster } from '../services/requestService';
+import { generateRequestPdf } from '../services/pdfService';
 
 export const requestsRouter = Router();
 
@@ -65,6 +66,21 @@ requestsRouter.post('/:id/rating', async (req, res, next) => {
     if (!rating || rating < 1 || rating > 5) throw new AppError('Оценка от 1 до 5', 400);
     await rateMaster(req.session.user!.id, Number(req.params.id), rating);
     res.json({ status: 'ok' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+requestsRouter.get('/:id/pdf', async (req, res, next) => {
+  try {
+    const pdfBuffer = await generateRequestPdf(Number(req.params.id));
+    
+    // Устанавливаем заголовки для скачивания файла
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${req.params.id}.pdf"`,
+    });
+    res.send(Buffer.from(pdfBuffer));
   } catch (err) {
     next(err);
   }

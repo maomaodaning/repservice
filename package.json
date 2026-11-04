@@ -17,11 +17,13 @@
     "dotenv": "^18.0.9",
     "express": "^4.22.3",
     "express-session": "^1.19.0",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "puppeteer": "^25.16.0"
   },
   "allowScripts": {
     "bcrypt@6.0.0": true,
-    "esbuild@0.28.2": true
+    "esbuild@0.28.2": true,
+    "puppeteer@25.16.0": true
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

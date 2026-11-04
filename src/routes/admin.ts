@@ -10,6 +10,7 @@ import { createService, updateService, deleteService } from '../services/adminSe
 import { pool } from '../db/pool';
 import { getAllDiagnostics } from '../services/adminService';
 import { updateRequestStatus } from '../services/adminService';
+import { generateRequestPdf } from '../services/pdfService';
 
 export const adminRouter = Router();
 
@@ -176,4 +177,17 @@ adminRouter.put('/requests/:id/status', async (req, res, next) => {
     await updateRequestStatus(Number(req.params.id), status);
     res.json({ status: 'ok' });
   } catch (err) { next(err); }
+});
+
+adminRouter.get('/requests/:id/pdf', async (req, res, next) => {
+  try {
+    const pdfBuffer = await generateRequestPdf(Number(req.params.id));
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="report-${req.params.id}.pdf"`,
+    });
+    res.send(Buffer.from(pdfBuffer));
+  } catch (err) {
+    next(err);
+  }
 });
