@@ -13,12 +13,7 @@ export const app = express();
 
 app.use(express.json());
 
-console.log('static path:', path.join(__dirname, '..', 'public'));
-console.log('static middleware:', typeof express.static(path.join(__dirname, '..', 'public')));
-
 app.use(express.static(path.join(__dirname, '..', 'public')));
-
-console.log('session type:', typeof session);
 
 // Настройка сессий
 app.use(session({
@@ -34,8 +29,6 @@ app.use(session({
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
-
-console.log('authRouter type:', typeof authRouter);
 
 app.use('/api/auth', authRouter);
 app.use('/api/services', servicesRouter);

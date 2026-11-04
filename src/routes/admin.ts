@@ -56,8 +56,6 @@ adminRouter.get('/masters', async (_req, res, next) => {
 
 // ===== СКЛАД =====
 
-console.log('getAllParts type:', typeof getAllParts);
-
 adminRouter.get('/parts', async (_req, res, next) => {
   try {
     const parts = await getAllParts();
