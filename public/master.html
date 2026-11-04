@@ -118,7 +118,17 @@
               <form onsubmit="submitReport(event, ${r.request_id})" style="margin-top: 10px;">
                 <textarea name="work_description" placeholder="Что сделано" required></textarea><br>
                 <input type="number" name="labor_cost" placeholder="Стоимость работ" required><br>
-                <button type="submit">Сохранить</button>
+                
+                <!-- Блок для запчастей -->
+                <div style="margin-top: 10px; background: #eee; padding: 10px; border-radius: 4px;">
+                  <p><b>Использованные запчасти:</b></p>
+                  <div id="parts-container-${r.request_id}">
+                    <!-- Сюда будут добавляться строки -->
+                  </div>
+                  <button type="button" onclick="addPartRow(${r.request_id})" style="font-size: 12px; padding: 4px 8px;">+ Добавить запчасть</button>
+                </div>
+
+                <button type="submit" style="margin-top: 10px;">Сохранить отчёт</button>
               </form>
             </details>
           </div>
@@ -215,7 +225,7 @@
           <td>${d.client_name}</td>
           <td>${d.master_name || '<i>не назначен</i>'}</td>
           <td>${d.result}</td>
-          <td>${d.estimated_cost ? d.estimated_cost + ' ₽' : '—'}</td>
+          <td>${d.estimated_cost ? d.estimated_cost + ' BYN' : '—'}</td>
         </tr>
       `).join('');
     }
@@ -236,11 +246,89 @@
           <td>№${r.request_id} (${r.problem_description.substring(0, 20)}...)</td>
           <td>${r.device_type} ${r.device_brand || ''}</td>
           <td>${r.work_description}</td>
-          <td style="font-weight: bold;">${r.labor_cost} ₽</td>
+          <td style="font-weight: bold;">${r.labor_cost} BYN</td>
           <td><span class="status-badge">${r.status_name}</span></td>
         </tr>
       `).join('');
     }
+
+        // Глобальная переменная для хранения списка запчастей
+    let availableParts = [];
+
+    // Загружаем список запчастей при старте
+    async function loadPartsList() {
+      try {
+        const res = await fetch('/api/master/parts');
+        const data = await res.json();
+        availableParts = data.parts || [];
+      } catch (err) {
+        console.error('Ошибка загрузки запчастей', err);
+      }
+    }
+
+    // Функция добавления строки для запчасти
+    function addPartRow(requestId) {
+      const container = document.getElementById(`parts-container-${requestId}`);
+      const rowId = 'part-row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+      
+      const options = availableParts.map(p => 
+        `<option value="${p.part_id}" data-price="${p.price}">${p.name} (остаток: ${p.quantity} шт, ${p.price} BYN)</option>`
+      ).join('');
+
+      const rowHtml = `
+        <div id="${rowId}" style="display: flex; gap: 5px; margin-bottom: 5px;">
+          <select name="part_id" style="flex-grow: 1;" required>
+            <option value="">-- Выберите запчасть --</option>
+            ${options}
+          </select>
+          <input type="number" name="quantity" min="1" value="1" style="width: 60px;" required>
+          <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background: #e74c3c; padding: 0 8px;">X</button>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', rowHtml);
+    }
+
+    // Обновляем submitReport
+    async function submitReport(e, id) {
+      e.preventDefault();
+      const form = e.target;
+      
+      // Собираем выбранные запчасти
+      const parts = [];
+      const container = document.getElementById(`parts-container-${id}`);
+      const rows = container.querySelectorAll('div[id^="part-row-"]');
+      
+      for (const row of rows) {
+        const partId = row.querySelector('select[name="part_id"]').value;
+        const quantity = row.querySelector('input[name="quantity"]').value;
+        if (partId && quantity) {
+          parts.push({ part_id: Number(partId), quantity: Number(quantity) });
+        }
+      }
+
+      const res = await fetch(`/api/master/requests/${id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          work_description: form.work_description.value,
+          labor_cost: Number(form.labor_cost.value),
+          parts: parts // <-- передаем запчасти
+        }),
+      });
+      
+      if (res.ok) {
+        form.reset();
+        container.innerHTML = ''; // очищаем контейнер
+        alert('Отчёт сохранён, запчасти списаны со склада');
+        loadRequests();
+      } else {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка при сохранении отчёта');
+      }
+    }
+
+    // В самом низу, перед loadRequests(), добавь вызов загрузки запчастей:
+    loadPartsList().then(() => loadRequests());
 
     // Инициализация при загрузке
     loadRequests();

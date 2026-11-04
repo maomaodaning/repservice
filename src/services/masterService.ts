@@ -81,25 +81,79 @@ export async function updateStatus(masterId: number, requestId: number, statusNa
 export async function createReport(masterId: number, requestId: number, data: {
   work_description: string;
   labor_cost: number;
+  parts: { part_id: number; quantity: number }[];
 }) {
-  const check = await pool.query(
-    'SELECT request_id FROM request WHERE request_id = $1 AND master_id = $2',
-    [requestId, masterId]
-  );
-  if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const res = await pool.query(
-    `INSERT INTO work_report (request_id, master_id, work_description, labor_cost)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [requestId, masterId, data.work_description, data.labor_cost]
-  );
+    // 1. Проверяем, что заявка у этого мастера
+    const check = await client.query(
+      'SELECT request_id FROM request WHERE request_id = $1 AND master_id = $2',
+      [requestId, masterId]
+    );
+    if (check.rows.length === 0) throw new AppError('Заявка не найдена', 404);
 
-  await pool.query(
-    'UPDATE request SET total_cost = $1 WHERE request_id = $2',
-    [data.labor_cost, requestId]
-  );
+    // 2. Создаём отчёт
+    const res = await client.query(
+      `INSERT INTO work_report (request_id, master_id, work_description, labor_cost)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [requestId, masterId, data.work_description, data.labor_cost]
+    );
 
-  return res.rows[0];
+    // 3. Обновляем итоговую стоимость заявки (работа + запчасти)
+    let totalCost = Number(data.labor_cost);
+
+    // 4. Списываем запчасти
+    if (data.parts && data.parts.length > 0) {
+      for (const item of data.parts) {
+        // Блокируем строку и проверяем остаток
+        const partRes = await client.query(
+          'SELECT quantity, price, name FROM part WHERE part_id = $1 FOR UPDATE',
+          [item.part_id]
+        );
+        
+        if (partRes.rows.length === 0) {
+          throw new AppError(`Запчасть с ID ${item.part_id} не найдена`, 404);
+        }
+
+        const part = partRes.rows[0];
+        if (part.quantity < item.quantity) {
+          throw new AppError(`Недостаточно запчастей "${part.name}" на складе (осталось: ${part.quantity})`, 400);
+        }
+
+        // Списываем со склада
+        await client.query(
+          'UPDATE part SET quantity = quantity - $1 WHERE part_id = $2',
+          [item.quantity, item.part_id]
+        );
+
+        // Записываем в request_part
+        await client.query(
+          `INSERT INTO request_part (request_id, part_id, quantity, price_at_moment)
+           VALUES ($1, $2, $3, $4)`,
+          [requestId, item.part_id, item.quantity, part.price]
+        );
+
+        // Добавляем к общей стоимости
+        totalCost += Number(part.price) * item.quantity;
+      }
+    }
+
+    // 5. Обновляем итоговую стоимость заявки
+    await client.query(
+      'UPDATE request SET total_cost = $1 WHERE request_id = $2',
+      [totalCost, requestId]
+    );
+
+    await client.query('COMMIT');
+    return res.rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function getMasterReports(masterId: number) {

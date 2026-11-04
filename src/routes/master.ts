@@ -3,6 +3,7 @@ import { requireRole } from '../middleware/auth';
 import { getMasterRequests, createDiagnostic, updateStatus, createReport, getMasterReports } from '../services/masterService';
 import { AppError } from '../middleware/errorHandler';
 import { getAllDiagnostics } from '../services/adminService';
+import { pool } from '../db/pool';
 
 export const masterRouter = Router();
 
@@ -46,13 +47,16 @@ masterRouter.put('/requests/:id/status', async (req, res, next) => {
 
 masterRouter.post('/requests/:id/report', async (req, res, next) => {
   try {
-    const { work_description, labor_cost } = req.body;
+    const { work_description, labor_cost, parts } = req.body;
     if (!work_description || labor_cost === undefined) {
       throw new AppError('Описание работ и стоимость обязательны', 400);
     }
     
+    // Передаем parts (если их нет, будет пустой массив)
     const report = await createReport(req.session.user!.id, Number(req.params.id), {
-      work_description, labor_cost,
+      work_description, 
+      labor_cost: Number(labor_cost),
+      parts: parts || [] 
     });
     res.status(201).json({ report });
   } catch (err) {
@@ -71,5 +75,12 @@ masterRouter.get('/reports', async (req, res, next) => {
   try {
     const reports = await getMasterReports(req.session.user!.id);
     res.json({ reports });
+  } catch (err) { next(err); }
+});
+
+masterRouter.get('/parts', async (_req, res, next) => {
+  try {
+    const result = await pool.query('SELECT part_id, name, quantity, price FROM part ORDER BY name');
+    res.json({ parts: result.rows });
   } catch (err) { next(err); }
 });
