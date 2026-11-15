@@ -125,11 +125,13 @@ export async function createReport(masterId: number, requestId: number, data: {
           throw new AppError(`Недостаточно запчастей "${part.name}" на складе (осталось: ${part.quantity})`, 400);
         }
 
-        // Списываем со склада
+        // Списываем со склада - Этот блок отключён, т.к. это теперь реализовано через триггер trg_fn_check_part_stock
+        /*
         await client.query(
           'UPDATE part SET quantity = quantity - $1 WHERE part_id = $2',
           [item.quantity, item.part_id]
         );
+        */
 
         // Записываем в request_part
         await client.query(
