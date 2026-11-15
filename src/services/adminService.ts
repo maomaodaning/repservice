@@ -1,3 +1,4 @@
+//adminService.ts
 import { pool } from '../db/pool';
 import { AppError } from '../middleware/errorHandler';
 

@@ -1,3 +1,4 @@
+//reportService.ts
 import { pool } from '../db/pool';
 
 export async function getRevenueReport(from?: string, to?: string) {
