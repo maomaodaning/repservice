@@ -140,15 +140,23 @@ export async function createReport(masterId: number, requestId: number, data: {
           [requestId, item.part_id, item.quantity, part.price]
         );
 
-        // Добавляем к общей стоимости
-        totalCost += Number(part.price) * item.quantity;
+        // Добавляем к общей стоимости - теперь это реализовано в функции дальше
+        //totalCost += Number(part.price) * item.quantity;
       }
     }
 
-    // 5. Обновляем итоговую стоимость заявки
+    // Вызываем функцию БД для пересчета итоговой стоимости
+    const totalCostRes = await client.query(
+      'SELECT fn_calculate_request_total_cost($1) AS total_cost',
+      [requestId]
+    );
+
+    const calculatedTotalCost = totalCostRes.rows[0].total_cost;
+
+    // Обновляем поле total_cost в заявке
     await client.query(
       'UPDATE request SET total_cost = $1 WHERE request_id = $2',
-      [totalCost, requestId]
+      [calculatedTotalCost, requestId]
     );
 
     await client.query('COMMIT');
