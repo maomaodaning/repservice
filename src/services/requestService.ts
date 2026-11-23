@@ -1,5 +1,7 @@
+//requestService.ts
 import { pool } from '../db/pool';
 import { AppError } from '../middleware/errorHandler';
+import { sendEmail } from '../services/mailService';
 
 export async function createRequest(clientId: number, data: {
   problem_description: string;
@@ -186,6 +188,8 @@ export async function payRequest(clientId: number, requestId: number, data: { am
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    
+    // Обновляем статус (здесь сработает триггер в БД и создаст запись в NOTIFICATION)
     await client.query(
       `INSERT INTO payment (request_id, amount, method, status) VALUES ($1, $2, $3, 'completed')`,
       [requestId, data.amount, data.method]
@@ -195,6 +199,22 @@ export async function payRequest(clientId: number, requestId: number, data: { am
       [requestId]
     );
     await client.query('COMMIT');
+
+    // Отправка письма клиенту
+    const clientRes = await pool.query(
+      'SELECT email, full_name FROM client WHERE client_id = $1',
+      [clientId]
+    );
+
+    if (clientRes.rows.length > 0 && clientRes.rows[0].email) {
+      const clientData = clientRes.rows[0];
+      sendEmail(
+        clientData.email,
+        'Оплата прошла успешно',
+        `Здравствуйте, ${clientData.full_name}! Ваша заявка №${requestId} успешно оплачена. Сумма: ${data.amount} BYN. Спасибо, что выбрали нас!`
+      ).catch(err => console.error('Ошибка фоновой отправки:', err));
+    }
+
     return { status: 'ok' };
   } catch (err) {
     await client.query('ROLLBACK');

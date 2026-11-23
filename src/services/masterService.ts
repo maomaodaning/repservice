@@ -1,5 +1,7 @@
+//masterService.ts
 import { pool } from '../db/pool';
 import { AppError } from '../middleware/errorHandler';
+import { sendEmail } from '../services/mailService';
 
 export async function getMasterRequests(masterId: number, statusName?: string) {
   let query = `
@@ -78,6 +80,28 @@ export async function updateStatus(masterId: number, requestId: number, statusNa
     `UPDATE request SET status_id = $1 ${completedAtSql} WHERE request_id = $2 RETURNING request_id`,
     [statusId, requestId]
   );
+
+  // Отправка письма клиенту
+  if (statusName === 'Готово') {
+    // Получаем email клиента
+    const clientRes = await pool.query(
+      `SELECT c.email, c.full_name FROM request r 
+       JOIN client c ON c.client_id = r.client_id 
+       WHERE r.request_id = $1`,
+      [requestId]
+    );
+
+    if (clientRes.rows.length > 0 && clientRes.rows[0].email) {
+      const client = clientRes.rows[0];
+      // Вызываем функцию БЕЗ await, чтобы не задерживать ответ пользователю
+      sendEmail(
+        client.email,
+        'Ваш ремонт готов!',
+        `Здравствуйте, ${client.full_name}! Ваша заявка №${requestId} готова. Пожалуйста, перейдите в личный кабинет для оплаты.`
+      ).catch(err => console.error('Ошибка фоновой отправки:', err));
+    }
+  }
+
   return res.rows[0];
 }
 
@@ -160,6 +184,23 @@ export async function createReport(masterId: number, requestId: number, data: {
     );
 
     await client.query('COMMIT');
+
+    // Письмо администратору в случае низкого остатка
+    const lowStockRes = await pool.query(
+      'SELECT name, quantity, min_quantity FROM part WHERE quantity <= min_quantity'
+    );
+
+    if (lowStockRes.rows.length > 0) {
+      const adminEmail = 'timofeisavin1909@gmail.com'; // Потом заменить на подтягивание из dotenv
+      let message = 'Внимание! Следующие запчасти заканчиваются:\n\n';
+      lowStockRes.rows.forEach(p => {
+        message += `- ${p.name}: осталось ${p.quantity} шт. (минимальный остаток: ${p.min_quantity})\n`;
+      });
+      
+      sendEmail(adminEmail, 'Низкий остаток запчастей на складе', message)
+        .catch(err => console.error('Ошибка фоновой отправки админу:', err));
+    }
+
     return res.rows[0];
   } catch (err) {
     await client.query('ROLLBACK');
