@@ -1,13 +1,16 @@
 import dotenv from 'dotenv';
+dotenv.config(); // <-- загружаем .env первым делом
+
 import { app } from './app';
 import { pool } from './db/pool';
-
-dotenv.config();
 
 const port = Number(process.env.PORT) || 3000;
 
 async function start() {
   try {
+
+    //console.log('Email user:', process.env.EMAIL_USER);
+
     await pool.query('SELECT 1');
     console.log('PostgreSQL подключён');
 
