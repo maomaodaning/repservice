@@ -1,22 +1,23 @@
+<!-- register.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Регистрация</title>
+  <title data-i18n="register.title">Регистрация</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header></header>
   <main>
-    <h2>Регистрация клиента</h2>
+    <h2 data-i18n="register.title">Регистрация клиента</h2>
     <form id="register-form" style="max-width: 400px;">
-      <label>ФИО<br><input type="text" name="full_name" required></label><br><br>
-      <label>Телефон<br><input type="text" name="phone" required></label><br><br>
-      <label>Email<br><input type="email" name="email"></label><br><br>
-      <label>Адрес<br><input type="text" name="address"></label><br><br>
-      <label>Логин<br><input type="text" name="login" required></label><br><br>
-      <label>Пароль<br><input type="password" name="password" required></label><br><br>
-      <button type="submit">Зарегистрироваться</button>
+      <label><span data-i18n="register.label_name">ФИО</span><br><input type="text" name="full_name" required></label><br><br>
+      <label><span data-i18n="register.label_phone">Телефон</span><br><input type="text" name="phone" required></label><br><br>
+      <label><span data-i18n="register.label_email">Email</span><br><input type="email" name="email"></label><br><br>
+      <label><span data-i18n="register.label_address">Адрес</span><br><input type="text" name="address"></label><br><br>
+      <label><span data-i18n="register.label_login">Логин</span><br><input type="text" name="login" required></label><br><br>
+      <label><span data-i18n="register.label_password">Пароль</span><br><input type="password" name="password" required></label><br><br>
+      <button type="submit" data-i18n="register.btn_register">Зарегистрироваться</button>
     </form>
     <p id="message"></p>
   </main>
@@ -55,6 +56,7 @@
       }
     });
   </script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
 </body>
 </html>

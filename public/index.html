@@ -1,31 +1,38 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Ремонт цифровой техники</title>
+  <title data-i18n="index.price_list">Ремонт цифровой техники</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header></header>
 
   <main>
-    <h2>Прайс-лист</h2>
+    <h2 data-i18n="index.price_list">Прайс-лист</h2>
     <table id="services-table">
       <thead>
-        <tr><th>Услуга</th><th>Цена (BYN)</th><th>Длительность (мин)</th></tr>
+        <tr>
+          <th data-i18n="index.th_service">Услуга</th>
+          <th data-i18n="index.th_price">Цена (BYN)</th>
+          <th data-i18n="index.th_duration">Длительность (мин)</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
   </main>
 
   <script src="/js/index.js"></script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
-      <footer style="margin-top: 40px; padding: 20px; background: #ecf0f1; border-radius: 6px; font-size: 14px; color: #555;">
-      <h3 style="margin-bottom: 10px; color: #2c3e50;">Наш сервисный центр</h3>
-      <p><b>Адрес:</b> г. Минск, ул. Розы Люксембург, д. 119, пом. 5</p>
-      <p><b>УНП:</b> 911266767</p>
-      <p><b>Телефон:</b> +375(29)459-67-67</p>
-      <p><b>Email:</b> info@repair-service.by</p>
-    </footer>
+  
+  <footer style="margin-top: 40px; padding: 20px; background: #ecf0f1; border-radius: 6px; font-size: 14px; color: #555;">
+    <h3 style="margin-bottom: 10px; color: #2c3e50;">Наш сервисный центр</h3>
+    <p><b>Адрес:</b> г. Минск, ул. Розы Люксембург, д. 119, пом. 5</p>
+    <p><b>УНП:</b> 911266767</p>
+    <p><b>Телефон:</b> +375(29)459-67-67</p>
+    <p><b>Email:</b> info@repair-service.by</p>
+  </footer>
 </body>
 </html>

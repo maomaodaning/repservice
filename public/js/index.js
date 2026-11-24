@@ -1,3 +1,4 @@
+// index.js
 async function loadServices() {
   const tbody = document.querySelector('#services-table tbody');
   try {

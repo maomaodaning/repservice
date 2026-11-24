@@ -1,0 +1,58 @@
+{
+  "nav": {
+    "home": "Home",
+    "login": "Login",
+    "register": "Register",
+    "my_requests": "My Requests",
+    "new_request": "New Request",
+    "admin_panel": "Admin Panel",
+    "logout": "Logout"
+  },
+  "login": {
+    "title": "Sign In",
+    "label_login": "Login",
+    "label_password": "Password",
+    "btn_login": "Sign In",
+    "forgot_password": "Forgot password?"
+  },
+  "register": {
+    "title": "Client Registration",
+    "label_name": "Full Name",
+    "label_phone": "Phone",
+    "label_email": "Email",
+    "label_address": "Address",
+    "label_login": "Login",
+    "label_password": "Password",
+    "btn_register": "Register"
+  },
+  "index": {
+    "price_list": "Price List",
+    "th_service": "Service",
+    "th_price": "Price (BYN)",
+    "th_duration": "Duration (min)"
+  },
+  "requests": {
+    "title": "My Requests",
+    "btn_create": "Create Request",
+    "btn_pay": "Pay",
+    "btn_rate": "Rate",
+    "btn_pdf": "Download PDF",
+    "status": "Status",
+    "device": "Device",
+    "issue": "Issue",
+    "cost": "Cost"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "tab_requests": "Requests",
+    "tab_stock": "Stock & Orders",
+    "tab_services": "Services (Price)",
+    "tab_diagnostics": "Diagnostics",
+    "tab_staff": "Staff",
+    "tab_reports": "Analytics",
+    "th_client": "Client",
+    "th_status": "Status",
+    "th_master": "Master",
+    "th_actions": "Actions"
+  }
+}

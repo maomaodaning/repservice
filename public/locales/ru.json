@@ -1,0 +1,58 @@
+{
+  "nav": {
+    "home": "Главная",
+    "login": "Войти",
+    "register": "Регистрация",
+    "my_requests": "Мои заявки",
+    "new_request": "Новая заявка",
+    "admin_panel": "Панель управления",
+    "logout": "Выйти"
+  },
+  "login": {
+    "title": "Вход в систему",
+    "label_login": "Логин",
+    "label_password": "Пароль",
+    "btn_login": "Войти",
+    "forgot_password": "Забыли пароль?"
+  },
+  "register": {
+    "title": "Регистрация клиента",
+    "label_name": "ФИО",
+    "label_phone": "Телефон",
+    "label_email": "Email",
+    "label_address": "Адрес",
+    "label_login": "Логин",
+    "label_password": "Пароль",
+    "btn_register": "Зарегистрироваться"
+  },
+  "index": {
+    "price_list": "Прайс-лист",
+    "th_service": "Услуга",
+    "th_price": "Цена (BYN)",
+    "th_duration": "Длительность (мин)"
+  },
+  "requests": {
+    "title": "Мои заявки",
+    "btn_create": "Создать заявку",
+    "btn_pay": "Оплатить",
+    "btn_rate": "Оценить",
+    "btn_pdf": "Скачать отчёт (PDF)",
+    "status": "Статус",
+    "device": "Устройство",
+    "issue": "Неисправность",
+    "cost": "Стоимость"
+  },
+  "admin": {
+    "title": "Панель администратора",
+    "tab_requests": "Заявки",
+    "tab_stock": "Склад и Заказы",
+    "tab_services": "Услуги (Прайс)",
+    "tab_diagnostics": "Диагностики",
+    "tab_staff": "Персонал",
+    "tab_reports": "Аналитика",
+    "th_client": "Клиент",
+    "th_status": "Статус",
+    "th_master": "Мастер",
+    "th_actions": "Действия"
+  }
+}

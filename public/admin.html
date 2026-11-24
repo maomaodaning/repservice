@@ -1,8 +1,9 @@
+<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Панель администратора</title>
+  <title data-i18n="admin.title">Панель администратора</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
     .assign-select { padding: 4px; }
@@ -15,21 +16,22 @@
 
   <main style="max-width: 1200px;">
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
-      <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;">Заявки</button>
-      <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;">Склад и Заказы</button>
-      <button onclick="switchTab('services')" id="tab-btn-services" style="background: #7f8c8d;">Услуги (Прайс)</button>
-      <button onclick="switchTab('diagnostics')" id="tab-btn-diagnostics" style="background: #7f8c8d;">Диагностики</button>
-      <button onclick="switchTab('staff')" id="tab-btn-staff" style="background: #7f8c8d;">Персонал</button>
-      <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;">Аналитика</button>
+      <button onclick="switchTab('requests')" id="tab-btn-requests" style="background: #2980b9;" data-i18n="admin.tab_requests">Заявки</button>
+      <button onclick="switchTab('stock')" id="tab-btn-stock" style="background: #7f8c8d;" data-i18n="admin.tab_stock">Склад и Заказы</button>
+      <button onclick="switchTab('services')" id="tab-btn-services" style="background: #7f8c8d;" data-i18n="admin.tab_services">Услуги (Прайс)</button>
+      <button onclick="switchTab('diagnostics')" id="tab-btn-diagnostics" style="background: #7f8c8d;" data-i18n="admin.tab_diagnostics">Диагностики</button>
+      <button onclick="switchTab('staff')" id="tab-btn-staff" style="background: #7f8c8d;" data-i18n="admin.tab_staff">Персонал</button>
+      <button onclick="switchTab('reports')" id="tab-btn-reports" style="background: #7f8c8d;" data-i18n="admin.tab_reports">Аналитика</button>
     </div>
 
     <!-- ВКЛАДКА: ЗАЯВКИ -->
     <div id="tab-requests">
-      <h2>Активные заявки</h2>
+      <h2 data-i18n="admin.tab_requests">Активные заявки</h2>
       <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-        <label>Фильтр по статусу: 
+        <label><span data-i18n="admin.filter_status">Фильтр по статусу:</span>
           <select id="filter-status" onchange="loadRequests()">
-            <option value="">Все (кроме выданных)</option>
+            <option value="" data-i18n="admin.all_except_issued">Все (кроме выданных)</option>
+            <!-- Опции статусов не переводим, так как они идут из БД -->
             <option value="Новая">Новая</option>
             <option value="Принята">Принята</option>
             <option value="В работе">В работе</option>
@@ -37,21 +39,37 @@
             <option value="Оплачено">Оплачено</option>
           </select>
         </label>
-        <label style="cursor: pointer;"><input type="checkbox" id="show-issued" onchange="loadRequests()"> Показать выданные</label>
+        <label style="cursor: pointer;"><input type="checkbox" id="show-issued" onchange="loadRequests()"> <span data-i18n="admin.show_issued">Показать выданные</span></label>
       </div>
 
       <table class="admin-table" id="active-requests-table">
         <thead>
-          <tr><th>ID</th><th>Клиент</th><th>Устройство</th><th>Неисправность</th><th>Статус</th><th>Мастер</th><th>Действия</th></tr>
+          <tr>
+            <th>ID</th>
+            <th data-i18n="admin.th_client">Клиент</th>
+            <th data-i18n="requests.device">Устройство</th>
+            <th data-i18n="requests.issue">Неисправность</th>
+            <th data-i18n="admin.th_status">Статус</th>
+            <th data-i18n="admin.th_master">Мастер</th>
+            <th data-i18n="admin.th_actions">Действия</th>
+          </tr>
         </thead>
         <tbody id="requests-tbody"></tbody>
       </table>
 
       <div id="issued-block" style="display: none; margin-top: 40px; opacity: 0.7;">
-        <h2>Выданные заявки (Архив)</h2>
+        <h2 data-i18n="admin.issued_archive">Выданные заявки (Архив)</h2>
         <table class="admin-table" style="background: #f9f9f9;">
           <thead>
-            <tr><th>ID</th><th>Клиент</th><th>Устройство</th><th>Статус</th><th>Мастер</th><th>Оплачено</th><th>Действие</th></tr>
+            <tr>
+              <th>ID</th>
+              <th data-i18n="admin.th_client">Клиент</th>
+              <th data-i18n="requests.device">Устройство</th>
+              <th data-i18n="admin.th_status">Статус</th>
+              <th data-i18n="admin.th_master">Мастер</th>
+              <th data-i18n="admin.th_paid">Оплачено</th>
+              <th data-i18n="admin.th_action">Действие</th>
+            </tr>
           </thead>
           <tbody id="issued-tbody"></tbody>
         </table>
@@ -60,42 +78,51 @@
 
     <!-- ВКЛАДКА: СКЛАД -->
     <div id="tab-stock" style="display: none;">
-      <h2>Запчасти на складе</h2>
+      <h2 data-i18n="admin.stock_parts">Запчасти на складе</h2>
       <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h3>Добавить новую запчасть</h3>
+        <h3 data-i18n="admin.add_part">Добавить новую запчасть</h3>
         <form id="new-part-form" onsubmit="createNewPart(event)">
-          <input type="text" name="name" placeholder="Название" required>
-          <input type="text" name="article" placeholder="Артикул">
-          <input type="number" name="quantity" placeholder="Кол-во" required>
-          <input type="number" name="price" placeholder="Цена" required>
-          <input type="number" name="min_quantity" placeholder="Мин. остаток" required>
+          <input type="text" name="name" placeholder="Название" data-i18n-placeholder="admin.ph_name" required>
+          <input type="text" name="article" placeholder="Артикул" data-i18n-placeholder="admin.ph_article">
+          <input type="number" name="quantity" placeholder="Кол-во" data-i18n-placeholder="admin.ph_qty" required>
+          <input type="number" name="price" placeholder="Цена" data-i18n-placeholder="admin.ph_price" required>
+          <input type="number" name="min_quantity" placeholder="Мин. остаток" data-i18n-placeholder="admin.ph_min" required>
           <select name="supplier_id" id="new-part-supplier"></select>
-          <button type="submit">Добавить</button>
+          <button type="submit" data-i18n="admin.btn_add">Добавить</button>
         </form>
       </div>
 
       <table class="admin-table" style="margin-bottom: 20px;">
-        <thead><tr><th>Название</th><th>Артикул</th><th>Остаток</th><th>Цена</th><th>Поставщик</th><th>Действие</th></tr></thead>
+        <thead>
+          <tr>
+            <th data-i18n="admin.th_name">Название</th>
+            <th data-i18n="admin.th_article">Артикул</th>
+            <th data-i18n="admin.th_qty">Остаток</th>
+            <th data-i18n="admin.th_price">Цена</th>
+            <th data-i18n="admin.th_supplier">Поставщик</th>
+            <th data-i18n="admin.th_action">Действие</th>
+          </tr>
+        </thead>
         <tbody id="parts-tbody"></tbody>
       </table>
 
       <div style="display: flex; gap: 40px;">
         <div>
-          <h3>Поставка (приход)</h3>
+          <h3 data-i18n="admin.supply_title">Поставка (приход)</h3>
           <form id="supply-form" onsubmit="supplyPart(event)">
             <select name="part_id" id="supply-part-select" required></select>
-            <input type="number" name="quantity" placeholder="Кол-во" required style="width: 80px;">
-            <button type="submit">Добавить</button>
+            <input type="number" name="quantity" placeholder="Кол-во" data-i18n-placeholder="admin.ph_qty" required style="width: 80px;">
+            <button type="submit" data-i18n="admin.btn_add">Добавить</button>
           </form>
         </div>
 
         <div>
-          <h3>Создать заказ поставщику</h3>
+          <h3 data-i18n="admin.order_title">Создать заказ поставщику</h3>
           <form id="order-form" onsubmit="createOrder(event)">
             <select name="supplier_id" id="order-supplier-select" required></select>
             <select name="part_id" id="order-part-select" required></select>
-            <input type="number" name="quantity" placeholder="Кол-во" required style="width: 80px;">
-            <button type="submit">Заказать</button>
+            <input type="number" name="quantity" placeholder="Кол-во" data-i18n-placeholder="admin.ph_qty" required style="width: 80px;">
+            <button type="submit" data-i18n="admin.btn_order">Заказать</button>
           </form>
         </div>
       </div>
@@ -103,58 +130,74 @@
 
     <!-- ВКЛАДКА: УСЛУГИ -->
     <div id="tab-services" style="display: none;">
-      <h2>Управление прайс-листом</h2>
+      <h2 data-i18n="admin.services_title">Управление прайс-листом</h2>
       <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h3>Добавить новую услугу</h3>
+        <h3 data-i18n="admin.add_service">Добавить новую услугу</h3>
         <form id="service-form" onsubmit="createService(event)">
-          <input type="text" name="name" placeholder="Название" required>
-          <input type="number" name="price" placeholder="Цена" required>
-          <input type="number" name="duration" placeholder="Длительность (мин)" required>
-          <button type="submit">Добавить</button>
+          <input type="text" name="name" placeholder="Название" data-i18n-placeholder="admin.ph_name" required>
+          <input type="number" name="price" placeholder="Цена" data-i18n-placeholder="admin.ph_price" required>
+          <input type="number" name="duration" placeholder="Длительность (мин)" data-i18n-placeholder="admin.ph_duration" required>
+          <button type="submit" data-i18n="admin.btn_add">Добавить</button>
         </form>
       </div>
       <table class="admin-table">
-        <thead><tr><th>Название</th><th>Цена (BYN)</th><th>Длительность (мин)</th><th>Действие</th></tr></thead>
+        <thead>
+          <tr>
+            <th data-i18n="admin.th_name">Название</th>
+            <th data-i18n="admin.th_price_byn">Цена (BYN)</th>
+            <th data-i18n="admin.th_duration">Длительность (мин)</th>
+            <th data-i18n="admin.th_action">Действие</th>
+          </tr>
+        </thead>
         <tbody id="services-tbody"></tbody>
       </table>
     </div>
 
     <!-- ВКЛАДКА: ДИАГНОСТИКИ -->
     <div id="tab-diagnostics" style="display: none;">
-      <h2>Все диагностики</h2>
+      <h2 data-i18n="admin.diag_title">Все диагностики</h2>
       <table class="admin-table">
-        <thead><tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Мастер</th><th>Результат</th><th>Рекомендации</th><th>Предв. стоимость</th></tr></thead>
+        <thead>
+          <tr>
+            <th data-i18n="admin.th_date">Дата</th>
+            <th data-i18n="admin.th_request">Заявка</th>
+            <th data-i18n="admin.th_client">Клиент</th>
+            <th data-i18n="admin.th_master">Мастер</th>
+            <th data-i18n="admin.th_result">Результат</th>
+            <th data-i18n="admin.th_recs">Рекомендации</th>
+            <th data-i18n="admin.th_est_cost">Предв. стоимость</th>
+          </tr>
+        </thead>
         <tbody id="diagnostics-tbody"></tbody>
       </table>
     </div>
 
     <!-- ВКЛАДКА: ПЕРСОНАЛ -->
     <div id="tab-staff" style="display: none;">
-      <h2>Управление персоналом</h2>
+      <h2 data-i18n="admin.staff_title">Управление персоналом</h2>
       
-      <!-- Форма создания -->
       <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h3>Добавить нового мастера</h3>
+        <h3 data-i18n="admin.add_master">Добавить нового мастера</h3>
         <form id="new-master-form" onsubmit="createMaster(event)" style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <input type="text" name="full_name" placeholder="ФИО" required>
-          <input type="text" name="phone" placeholder="Телефон" required>
-          <input type="text" name="specialization" placeholder="Специализация">
-          <input type="text" name="login" placeholder="Логин" required>
-          <input type="password" name="password" placeholder="Пароль" required>
-          <button type="submit" style="background: #27ae60;">Создать</button>
+          <input type="text" name="full_name" placeholder="ФИО" data-i18n-placeholder="admin.ph_fio" required>
+          <input type="text" name="phone" placeholder="Телефон" data-i18n-placeholder="register.label_phone" required>
+          <input type="text" name="specialization" placeholder="Специализация" data-i18n-placeholder="admin.ph_spec">
+          <input type="text" name="login" placeholder="Логин" data-i18n-placeholder="login.label_login" required>
+          <input type="password" name="password" placeholder="Пароль" data-i18n-placeholder="login.label_password" required>
+          <button type="submit" style="background: #27ae60;" data-i18n="admin.btn_create">Создать</button>
         </form>
       </div>
 
       <table class="admin-table">
         <thead>
           <tr>
-            <th>ФИО</th>
-            <th>Телефон</th>
-            <th>Специализация</th>
-            <th>Рейтинг</th>
-            <th>Всего заявок</th>
-            <th>Завершено</th>
-            <th>Действие</th>
+            <th data-i18n="admin.th_fio">ФИО</th>
+            <th data-i18n="register.label_phone">Телефон</th>
+            <th data-i18n="admin.th_spec">Специализация</th>
+            <th data-i18n="admin.th_rating">Рейтинг</th>
+            <th data-i18n="admin.th_total_req">Всего заявок</th>
+            <th data-i18n="admin.th_completed">Завершено</th>
+            <th data-i18n="admin.th_action">Действие</th>
           </tr>
         </thead>
         <tbody id="staff-tbody"></tbody>
@@ -163,25 +206,43 @@
 
     <!-- ВКЛАДКА: АНАЛИТИКА -->
     <div id="tab-reports" style="display: none;">
-      <h2>Аналитика</h2>
+      <h2 data-i18n="admin.reports_title">Аналитика</h2>
       <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
-        <h3>Выручка</h3>
+        <h3 data-i18n="admin.revenue">Выручка</h3>
         <table class="admin-table" id="revenue-table">
-          <thead><tr><th>Дата</th><th>Сумма (BYN)</th><th>Кол-во оплат</th></tr></thead>
+          <thead>
+            <tr>
+              <th data-i18n="admin.th_date">Дата</th>
+              <th data-i18n="admin.th_amount">Сумма (BYN)</th>
+              <th data-i18n="admin.th_payments">Кол-во оплат</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
       <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px;">
-        <h3>Статистика заявок по статусам</h3>
+        <h3 data-i18n="admin.req_stats">Статистика заявок по статусам</h3>
         <table class="admin-table" id="requests-report-table">
-          <thead><tr><th>Статус</th><th>Количество</th></tr></thead>
+          <thead>
+            <tr>
+              <th data-i18n="admin.th_status">Статус</th>
+              <th data-i18n="admin.th_count">Количество</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
       <div style="background: white; padding: 15px; border-radius: 6px;">
-        <h3>Загрузка мастеров</h3>
+        <h3 data-i18n="admin.masters_load">Загрузка мастеров</h3>
         <table class="admin-table" id="masters-report-table">
-          <thead><tr><th>Мастер</th><th>Рейтинг</th><th>Всего заявок</th><th>Завершено</th></tr></thead>
+          <thead>
+            <tr>
+              <th data-i18n="admin.th_master">Мастер</th>
+              <th data-i18n="admin.th_rating">Рейтинг</th>
+              <th data-i18n="admin.th_total_req">Всего заявок</th>
+              <th data-i18n="admin.th_completed">Завершено</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -189,6 +250,7 @@
   </main>
 
   <script>
+    // ... ВЕСЬ ТВОЙ JS КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ...
     let mastersList = [];
     let partsList = [];
     let suppliersList = [];
@@ -506,6 +568,7 @@
       await loadRequests();
     })();
   </script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+//header.js
 async function initHeader() {
   const header = document.querySelector('header');
   if (!header) return;
@@ -16,43 +17,49 @@ async function initHeader() {
   let navHtml = '';
   
   if (!user) {
-    // Гость
     navHtml = `
-      <a href="/">Главная</a>
-      <a href="/login.html">Войти</a>
-      <a href="/register.html">Регистрация</a>
+      <a href="/" data-i18n="nav.home">Главная</a>
+      <a href="/login.html" data-i18n="nav.login">Войти</a>
+      <a href="/register.html" data-i18n="nav.register">Регистрация</a>
     `;
   } else if (user.role === 'client') {
-    // Клиент
     navHtml = `
-      <a href="/">Главная</a>
-      <a href="/requests.html">Мои заявки</a>
-      <a href="/create-request.html">Новая заявка</a>
+      <a href="/" data-i18n="nav.home">Главная</a>
+      <a href="/requests.html" data-i18n="nav.my_requests">Мои заявки</a>
+      <a href="/create-request.html" data-i18n="nav.new_request">Новая заявка</a>
       <span class="user-info">Клиент: <b>${user.login || 'ID ' + user.id}</b></span>
-      <a href="#" onclick="logout(event)">Выйти</a>
+      <a href="#" onclick="logout(event)" data-i18n="nav.logout">Выйти</a>
     `;
   } else if (user.role === 'master') {
-    // Мастер
     navHtml = `
-      <a href="/">Главная</a>
-      <a href="/master.html">Мои заявки</a>
+      <a href="/" data-i18n="nav.home">Главная</a>
+      <a href="/master.html" data-i18n="nav.my_requests">Мои заявки</a>
       <span class="user-info">Мастер: <b>${user.login || 'ID ' + user.id}</b></span>
-      <a href="#" onclick="logout(event)">Выйти</a>
+      <a href="#" onclick="logout(event)" data-i18n="nav.logout">Выйти</a>
     `;
   } else if (user.role === 'admin') {
-    // Админ
     navHtml = `
-      <a href="/">Главная</a>
-      <a href="/admin.html">Панель управления</a>
+      <a href="/" data-i18n="nav.home">Главная</a>
+      <a href="/admin.html" data-i18n="nav.admin_panel">Панель управления</a>
       <span class="user-info">Админ: <b>${user.login || 'ID ' + user.id}</b></span>
-      <a href="#" onclick="logout(event)">Выйти</a>
+      <a href="#" onclick="logout(event)" data-i18n="nav.logout">Выйти</a>
     `;
   }
 
   header.innerHTML = `
     <div class="nav-links">${navHtml}</div>
-    <div class="version">v1.0</div>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div class="lang-switcher" style="font-size: 13px; display: flex; gap: 5px;">
+        <a href="#" onclick="changeLanguage('ru'); return false;" style="text-decoration: none; color: ${localStorage.getItem('lang') === 'ru' || !localStorage.getItem('lang') ? '#2980b9' : '#7f8c8d'}; font-weight: ${localStorage.getItem('lang') === 'ru' || !localStorage.getItem('lang') ? 'bold' : 'normal'};">RU</a>
+        <a href="#" onclick="changeLanguage('en'); return false;" style="text-decoration: none; color: ${localStorage.getItem('lang') === 'en' ? '#2980b9' : '#7f8c8d'}; font-weight: ${localStorage.getItem('lang') === 'en' ? 'bold' : 'normal'};">EN</a>
+        <a href="#" onclick="changeLanguage('zh'); return false;" style="text-decoration: none; color: ${localStorage.getItem('lang') === 'zh' ? '#2980b9' : '#7f8c8d'}; font-weight: ${localStorage.getItem('lang') === 'zh' ? 'bold' : 'normal'};">中文</a>
+      </div>
+      <div class="version">v1.0</div>
+    </div>
   `;
+
+  // Переводим текст в хедере сразу после его рендера
+  if (typeof translatePage === 'function') translatePage();
 }
 
 async function logout(e) {
@@ -61,5 +68,4 @@ async function logout(e) {
   window.location.href = '/login.html';
 }
 
-// Запускаем при загрузке страницы
 document.addEventListener('DOMContentLoaded', initHeader);

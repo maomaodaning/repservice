@@ -1,0 +1,58 @@
+{
+  "nav": {
+    "home": "首页",
+    "login": "登录",
+    "register": "注册",
+    "my_requests": "我的申请",
+    "new_request": "新申请",
+    "admin_panel": "管理面板",
+    "logout": "退出登录"
+  },
+  "login": {
+    "title": "系统登录",
+    "label_login": "用户名",
+    "label_password": "密码",
+    "btn_login": "登录",
+    "forgot_password": "忘记密码？"
+  },
+  "register": {
+    "title": "客户注册",
+    "label_name": "姓名",
+    "label_phone": "电话",
+    "label_email": "电子邮件",
+    "label_address": "地址",
+    "label_login": "用户名",
+    "label_password": "密码",
+    "btn_register": "注册"
+  },
+  "index": {
+    "price_list": "价格表",
+    "th_service": "服务",
+    "th_price": "价格 (BYN)",
+    "th_duration": "时长 (分钟)"
+  },
+  "requests": {
+    "title": "我的申请",
+    "btn_create": "创建申请",
+    "btn_pay": "支付",
+    "btn_rate": "评价",
+    "btn_pdf": "下载报告 (PDF)",
+    "status": "状态",
+    "device": "设备",
+    "issue": "故障",
+    "cost": "费用"
+  },
+  "admin": {
+    "title": "管理员面板",
+    "tab_requests": "申请",
+    "tab_stock": "库存和订单",
+    "tab_services": "服务（价格）",
+    "tab_diagnostics": "诊断",
+    "tab_staff": "员工",
+    "tab_reports": "分析",
+    "th_client": "客户",
+    "th_status": "状态",
+    "th_master": "师傅",
+    "th_actions": "操作"
+  }
+}

@@ -1,8 +1,9 @@
+<!-- master.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Кабинет мастера</title>
+  <title data-i18n="master.title">Кабинет мастера</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -10,38 +11,45 @@
   
   <main>
     <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
-      <button onclick="switchMasterTab('requests')" id="m-tab-btn-requests" style="background: #2980b9;">Мои заявки</button>
-      <button onclick="switchMasterTab('diagnostics')" id="m-tab-btn-diagnostics" style="background: #7f8c8d;">Все диагностики</button>
-      <button onclick="switchMasterTab('reports')" id="m-tab-btn-reports" style="background: #7f8c8d;">Мои отчёты</button>
+      <button onclick="switchMasterTab('requests')" id="m-tab-btn-requests" style="background: #2980b9;" data-i18n="master.tab_requests">Мои заявки</button>
+      <button onclick="switchMasterTab('diagnostics')" id="m-tab-btn-diagnostics" style="background: #7f8c8d;" data-i18n="master.tab_diagnostics">Все диагностики</button>
+      <button onclick="switchMasterTab('reports')" id="m-tab-btn-reports" style="background: #7f8c8d;" data-i18n="master.tab_reports">Мои отчёты</button>
     </div>
 
     <div id="m-tab-requests">
-      <h2>Заявки в работе</h2>
+      <h2 data-i18n="master.tab_requests">Заявки в работе</h2>
       <div id="requests-list">Загрузка...</div>
     </div>
 
     <div id="m-tab-diagnostics" style="display: none;">
-      <h2>Все диагностики в системе</h2>
+      <h2 data-i18n="master.all_diagnostics">Все диагностики в системе</h2>
       <table class="admin-table" style="width: 100%;">
         <thead>
-          <tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Мастер</th><th>Результат</th><th>Предв. стоимость</th></tr>
+          <tr>
+            <th data-i18n="admin.th_date">Дата</th>
+            <th data-i18n="admin.th_request">Заявка</th>
+            <th data-i18n="admin.th_client">Клиент</th>
+            <th data-i18n="admin.th_master">Мастер</th>
+            <th data-i18n="admin.th_result">Результат</th>
+            <th data-i18n="admin.th_est_cost">Предв. стоимость</th>
+          </tr>
         </thead>
         <tbody id="m-diagnostics-tbody"></tbody>
       </table>
     </div>
 
     <div id="m-tab-reports" style="display: none;">
-      <h2>История моих отчётов</h2>
+      <h2 data-i18n="master.my_reports">История моих отчётов</h2>
       <table class="admin-table" style="width: 100%;">
         <thead>
           <tr>
-            <th>Дата</th>
-            <th>Заявка</th>
-            <th>Устройство</th>
-            <th>Что сделано</th>
-            <th>Стоимость работ</th>
-            <th>Статус заявки</th>
-            <th>Действие</th>
+            <th data-i18n="admin.th_date">Дата</th>
+            <th data-i18n="admin.th_request">Заявка</th>
+            <th data-i18n="requests.device">Устройство</th>
+            <th data-i18n="master.th_what_done">Что сделано</th>
+            <th data-i18n="master.th_cost">Стоимость работ</th>
+            <th data-i18n="admin.th_status">Статус заявки</th>
+            <th data-i18n="admin.th_action">Действие</th>
           </tr>
         </thead>
         <tbody id="m-reports-tbody"></tbody>
@@ -50,6 +58,7 @@
   </main>
 
   <script>
+    // ... ВЕСЬ ТВОЙ JS КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ...
     let availableParts = [];
 
     async function loadPartsList() {
@@ -110,7 +119,6 @@
               </span>
             </div>
 
-            <!-- Кнопка скачивания PDF -->
             <a href="/api/master/requests/${r.request_id}/pdf" target="_blank" style="display: inline-block; margin-top: 10px; padding: 6px 12px; background: #34495e; color: white; text-decoration: none; border-radius: 4px; font-size: 13px;">📄 Скачать отчёт (PDF)</a>
 
             <div id="error-${r.request_id}" style="display: none; background: #fadbd8; color: #922b21; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 14px;"></div>
@@ -255,6 +263,7 @@
 
     loadPartsList().then(() => loadRequests());
   </script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
 </body>
 </html>

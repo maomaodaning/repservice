@@ -1,23 +1,24 @@
+<!-- login.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Вход</title>
+  <title data-i18n="login.title">Вход</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header></header>
   <main>
-    <h2>Вход в систему</h2>
+    <h2 data-i18n="login.title">Вход в систему</h2>
     <form id="login-form" style="max-width: 400px;">
-      <label>Логин<br><input type="text" name="login" required></label><br><br>
-      <label>Пароль<br><input type="password" name="password" required></label><br><br>
+      <label><span data-i18n="login.label_login">Логин</span><br><input type="text" name="login" required></label><br><br>
+      <label><span data-i18n="login.label_password">Пароль</span><br><input type="password" name="password" required></label><br><br>
       
-      <button type="submit">Войти</button>
+      <button type="submit" data-i18n="login.btn_login">Войти</button>
       
       <!-- Ссылка "Забыли пароль?" -->
       <div style="margin-top: 15px; text-align: center;">
-        <a href="#" id="forgot-password" style="color: #3498db; font-size: 14px; text-decoration: none;">Забыли пароль?</a>
+        <a href="#" id="forgot-password" style="color: #3498db; font-size: 14px; text-decoration: none;" data-i18n="login.forgot_password">Забыли пароль?</a>
       </div>
     </form>
     
@@ -55,9 +56,10 @@
     // Обработчик кнопки "Забыли пароль?"
     document.getElementById('forgot-password').addEventListener('click', (e) => {
       e.preventDefault();
-      alert('Для восстановления пароля, пожалуйста, обратитесь в сервисный центр. \nКонткктная информация указана на главной странице.');
+      alert('Для восстановления пароля, пожалуйста, обратитесь в сервисный центр. \nКонтактная информация указана на главной странице.');
     });
   </script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
 </body>
 </html>

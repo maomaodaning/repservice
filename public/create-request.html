@@ -1,44 +1,46 @@
+<!-- createRequest.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Новая заявка</title>
+  <title data-i18n="requests.new_request">Новая заявка</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <header></header>
 
   <main>
-    <h2>Создать заявку</h2>
+    <h2 data-i18n="requests.btn_create">Создать заявку</h2>
     <form id="request-form">
-      <h3>Устройство</h3>
-      <label>Тип (обязательно)<br>
+      <h3 data-i18n="requests.device">Устройство</h3>
+      <label><span data-i18n="requests.device_type">Тип (обязательно)</span><br>
         <input type="text" name="device_type" required placeholder="Ноутбук / Телефон">
       </label><br><br>
       
-      <label>Бренд<br>
+      <label><span data-i18n="requests.device_brand">Бренд</span><br>
         <input type="text" name="device_brand">
       </label><br><br>
       
-      <label>Модель<br>
+      <label><span data-i18n="requests.device_model">Модель</span><br>
         <input type="text" name="device_model">
       </label><br><br>
       
-      <label>Серийный номер<br>
+      <label><span data-i18n="requests.device_serial">Серийный номер</span><br>
         <input type="text" name="device_serial">
       </label><br><br>
 
-      <h3>Неисправность</h3>
-      <label>Описание (обязательно)<br>
+      <h3 data-i18n="requests.issue">Неисправность</h3>
+      <label><span data-i18n="requests.issue_desc">Описание (обязательно)</span><br>
         <textarea name="problem_description" rows="4" required></textarea>
       </label><br><br>
 
-      <button type="submit">Отправить заявку</button>
+      <button type="submit" data-i18n="requests.btn_send">Отправить заявку</button>
     </form>
     <p id="message"></p>
   </main>
 
   <script src="/js/create-request.js"></script>
+  <script src="/js/i18n.js"></script>
   <script src="/js/header.js"></script>
 </body>
 </html>
