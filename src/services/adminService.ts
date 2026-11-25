@@ -35,6 +35,7 @@ export async function getAllRequests(filters?: { status?: string; master_id?: nu
   const result = await pool.query(query, params);
   return result.rows;
 }
+
 export async function assignMaster(requestId: number, masterId: number) {
   const res = await pool.query(
     `UPDATE request SET master_id = $1, status_id = (SELECT status_id FROM status WHERE name = 'Принята')
@@ -61,6 +62,7 @@ export async function getAllParts() {
     SELECT p.*, s.name AS supplier_name 
     FROM part p
     LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+    WHERE p.is_deleted = FALSE
     ORDER BY p.name
   `);
   return res.rows;
@@ -89,6 +91,50 @@ export async function supplyPart(partId: number, quantity: number) {
 export async function getAllSuppliers() {
   const res = await pool.query('SELECT * FROM supplier ORDER BY name');
   return res.rows;
+}
+
+// === НОВОЕ: КОРЗИНА ДЛЯ ЗАПЧАСТЕЙ ===
+
+export async function getDeletedParts() {
+  const res = await pool.query(`
+    SELECT p.*, s.name AS supplier_name 
+    FROM part p
+    LEFT JOIN supplier s ON s.supplier_id = p.supplier_id
+    WHERE p.is_deleted = TRUE
+    ORDER BY p.name
+  `);
+  return res.rows;
+}
+
+export async function movePartToTrash(partId: number) {
+  const res = await pool.query(
+    `UPDATE part SET is_deleted = TRUE WHERE part_id = $1 RETURNING part_id`,
+    [partId]
+  );
+  if (res.rows.length === 0) throw new AppError('Запчасть не найдена', 404);
+  return res.rows[0];
+}
+
+export async function restorePart(partId: number) {
+  const res = await pool.query(
+    `UPDATE part SET is_deleted = FALSE WHERE part_id = $1 RETURNING part_id`,
+    [partId]
+  );
+  if (res.rows.length === 0) throw new AppError('Запчасть не найдена', 404);
+  return res.rows[0];
+}
+
+export async function deletePartForever(partId: number) {
+  try {
+    const res = await pool.query('DELETE FROM part WHERE part_id = $1 RETURNING part_id', [partId]);
+    if (res.rows.length === 0) throw new AppError('Запчасть не найдена', 404);
+    return res.rows[0];
+  } catch (err: any) {
+    if (err.code === '23503') {
+      throw new AppError('Невозможно удалить запчасть, так как она используется в заявках', 400);
+    }
+    throw err;
+  }
 }
 
 // === ЗАКАЗЫ ПОСТАВЩИКАМ ===

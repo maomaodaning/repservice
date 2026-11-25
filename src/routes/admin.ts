@@ -1,9 +1,11 @@
+//admin.ts
 import { Router } from 'express';
 import { requireRole } from '../middleware/auth';
 import { 
   getAllRequests, assignMaster, getAllMasters,
   getAllParts, createPart, supplyPart, getAllSuppliers,
-  createPurchaseOrder, receivePurchaseOrder
+  createPurchaseOrder, receivePurchaseOrder,
+  getDeletedParts, movePartToTrash, restorePart, deletePartForever
 } from '../services/adminService';
 import { getRevenueReport, getRequestsReport, getMastersWorkload } from '../services/reportService';
 import { createService, updateService, deleteService } from '../services/adminService';
@@ -81,6 +83,42 @@ adminRouter.post('/parts/:id/supply', async (req, res, next) => {
     res.json({ part });
   } catch (err) { next(err); }
 });
+
+// === НОВЫЕ РОУТЫ ДЛЯ КОРЗИНЫ ===
+
+// Получить все запчасти в корзине
+adminRouter.get('/parts/trash', async (_req, res, next) => {
+  try {
+    const parts = await getDeletedParts();
+    res.json({ parts });
+  } catch (err) { next(err); }
+});
+
+// Переместить в корзину (мягкое удаление)
+adminRouter.delete('/parts/:id', async (req, res, next) => {
+  try {
+    await movePartToTrash(Number(req.params.id));
+    res.json({ status: 'ok' });
+  } catch (err) { next(err); }
+});
+
+// Восстановить из корзины
+adminRouter.put('/parts/:id/restore', async (req, res, next) => {
+  try {
+    await restorePart(Number(req.params.id));
+    res.json({ status: 'ok' });
+  } catch (err) { next(err); }
+});
+
+// Удалить навсегда из БД
+adminRouter.delete('/parts/:id/force', async (req, res, next) => {
+  try {
+    await deletePartForever(Number(req.params.id));
+    res.json({ status: 'ok' });
+  } catch (err) { next(err); }
+});
+
+// ===== КОНЕЦ БЛОКА КОРЗИНЫ =====
 
 adminRouter.get('/suppliers', async (_req, res, next) => {
   try {

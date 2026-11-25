@@ -31,7 +31,6 @@
         <label><span data-i18n="admin.filter_status">Фильтр по статусу:</span>
           <select id="filter-status" onchange="loadRequests()">
             <option value="" data-i18n="admin.all_except_issued">Все (кроме выданных)</option>
-            <!-- Опции статусов не переводим, так как они идут из БД -->
             <option value="Новая">Новая</option>
             <option value="Принята">Принята</option>
             <option value="В работе">В работе</option>
@@ -106,7 +105,7 @@
         <tbody id="parts-tbody"></tbody>
       </table>
 
-      <div style="display: flex; gap: 40px;">
+      <div style="display: flex; gap: 40px; margin-bottom: 30px;">
         <div>
           <h3 data-i18n="admin.supply_title">Поставка (приход)</h3>
           <form id="supply-form" onsubmit="supplyPart(event)">
@@ -125,6 +124,23 @@
             <button type="submit" data-i18n="admin.btn_order">Заказать</button>
           </form>
         </div>
+      </div>
+
+      <!-- НОВЫЙ БЛОК: КОРЗИНА -->
+      <div style="border-top: 2px solid #ccc; padding-top: 20px; margin-top: 20px;">
+        <h2 style="color: #e74c3c;" data-i18n="admin.trash">Корзина</h2>
+        <table class="admin-table" style="background: #fdf2f2;">
+          <thead>
+            <tr>
+              <th data-i18n="admin.th_name">Название</th>
+              <th data-i18n="admin.th_article">Артикул</th>
+              <th data-i18n="admin.th_qty">Остаток</th>
+              <th data-i18n="admin.th_supplier">Поставщик</th>
+              <th data-i18n="admin.th_action">Действие</th>
+            </tr>
+          </thead>
+          <tbody id="trash-tbody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -250,7 +266,6 @@
   </main>
 
   <script>
-    // ... ВЕСЬ ТВОЙ JS КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ ...
     let mastersList = [];
     let partsList = [];
     let suppliersList = [];
@@ -371,7 +386,9 @@
           <td style="color: ${p.quantity <= p.min_quantity ? 'red' : 'black'}; font-weight: ${p.quantity <= p.min_quantity ? 'bold' : 'normal'}">${p.quantity}</td>
           <td>${p.price} BYN</td>
           <td>${p.supplier_name || '-'}</td>
-          <td>—</td>
+          <td>
+            <button onclick="movePartToTrash(${p.part_id})" style="background: #e74c3c; padding: 2px 8px; font-size: 12px;">В корзину</button>
+          </td>
         </tr>
       `).join('');
 
@@ -387,6 +404,55 @@
       const partSuppSelect = document.getElementById('new-part-supplier');
       if (partSuppSelect) {
         partSuppSelect.innerHTML = '<option value="">Без поставщика</option>' + suppliersList.map(s => `<option value="${s.supplier_id}">${s.name}</option>`).join('');
+      }
+
+      // Загружаем корзину
+      loadTrash();
+    }
+
+    async function loadTrash() {
+      const res = await fetch('/api/admin/parts/trash');
+      const data = await res.json();
+      const trashTbody = document.getElementById('trash-tbody');
+      
+      if (!data.parts || data.parts.length === 0) {
+        trashTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">Корзина пуста</td></tr>';
+        return;
+      }
+
+      trashTbody.innerHTML = data.parts.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.article || '-'}</td>
+          <td>${p.quantity}</td>
+          <td>${p.supplier_name || '-'}</td>
+          <td style="display: flex; gap: 5px;">
+            <button onclick="restorePart(${p.part_id})" style="background: #27ae60; padding: 2px 8px; font-size: 12px;">Восстановить</button>
+            <button onclick="deletePartForever(${p.part_id})" style="background: #c0392b; padding: 2px 8px; font-size: 12px;">Удалить навсегда</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function movePartToTrash(id) {
+      if (!confirm('Переместить запчасть в корзину?')) return;
+      await fetch(`/api/admin/parts/${id}`, { method: 'DELETE' });
+      loadStock();
+    }
+
+    async function restorePart(id) {
+      await fetch(`/api/admin/parts/${id}/restore`, { method: 'PUT' });
+      loadStock();
+    }
+
+    async function deletePartForever(id) {
+      if (!confirm('Вы уверены? Это действие нельзя отменить.')) return;
+      const res = await fetch(`/api/admin/parts/${id}/force`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error?.message || 'Ошибка удаления');
+      } else {
+        loadStock();
       }
     }
 
