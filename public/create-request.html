@@ -14,24 +14,24 @@
     <form id="request-form">
       <h3 data-i18n="requests.device">Устройство</h3>
       <label><span data-i18n="requests.device_type">Тип (обязательно)</span><br>
-        <input type="text" name="device_type" required placeholder="Ноутбук / Телефон">
+        <input type="text" name="device_type" required placeholder="Ноутбук / Телефон" data-i18n-placeholder="requests.device_type">
       </label><br><br>
       
       <label><span data-i18n="requests.device_brand">Бренд</span><br>
-        <input type="text" name="device_brand">
+        <input type="text" name="device_brand" data-i18n-placeholder="requests.device_brand">
       </label><br><br>
       
       <label><span data-i18n="requests.device_model">Модель</span><br>
-        <input type="text" name="device_model">
+        <input type="text" name="device_model" data-i18n-placeholder="requests.device_model">
       </label><br><br>
       
       <label><span data-i18n="requests.device_serial">Серийный номер</span><br>
-        <input type="text" name="device_serial">
+        <input type="text" name="device_serial" data-i18n-placeholder="requests.device_serial">
       </label><br><br>
 
       <h3 data-i18n="requests.issue">Неисправность</h3>
       <label><span data-i18n="requests.issue_desc">Описание (обязательно)</span><br>
-        <textarea name="problem_description" rows="4" required></textarea>
+        <textarea name="problem_description" rows="4" required data-i18n-placeholder="requests.issue_desc"></textarea>
       </label><br><br>
 
       <button type="submit" data-i18n="requests.btn_send">Отправить заявку</button>

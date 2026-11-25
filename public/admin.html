@@ -31,6 +31,7 @@
         <label><span data-i18n="admin.filter_status">Фильтр по статусу:</span>
           <select id="filter-status" onchange="loadRequests()">
             <option value="" data-i18n="admin.all_except_issued">Все (кроме выданных)</option>
+            <!-- Опции статусов не переводим, так как они идут из БД -->
             <option value="Новая">Новая</option>
             <option value="Принята">Принята</option>
             <option value="В работе">В работе</option>
@@ -105,7 +106,7 @@
         <tbody id="parts-tbody"></tbody>
       </table>
 
-      <div style="display: flex; gap: 40px; margin-bottom: 30px;">
+      <div style="display: flex; gap: 40px;">
         <div>
           <h3 data-i18n="admin.supply_title">Поставка (приход)</h3>
           <form id="supply-form" onsubmit="supplyPart(event)">
@@ -410,6 +411,7 @@
       loadTrash();
     }
 
+    // НОВЫЕ ФУНКЦИИ ДЛЯ КОРЗИНЫ
     async function loadTrash() {
       const res = await fetch('/api/admin/parts/trash');
       const data = await res.json();
